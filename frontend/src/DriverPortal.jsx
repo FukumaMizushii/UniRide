@@ -81,9 +81,10 @@ const DriverPortal = () => {
       await import("leaflet/dist/leaflet.css");
 
       // Define boundary points
-      const topLeft = [24.912361403380515, 91.83300018310548];
-      const bottomRight = [24.90477133957499, 91.84327840805054];
-      const center = [24.9085384, 91.8374471];
+      // const topLeft = [24.912361403380515, 91.83300018310548];
+      const topLeft = [24.932424169029986, 91.80828094482423];
+      const bottomRight = [24.90909189467807, 91.85707569122316];
+      const center = [24.921079669610492, 91.83162689208986];
 
       // Create bounds and initialize map
       const bounds = L.latLngBounds([topLeft, bottomRight]);

@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import socket from "./socket";
 import Button from "./button";
+import { icon } from "leaflet";
+import gate from "./assets/sust-gate.png";
+import audi from "./assets/audi.png";
+import iict from "./assets/iict.png";
+import chetona71 from "./assets/chetona71.png";
+import eBuilding from "./assets/e-building.png";
+import shahHall from "./assets/shah-paran-hall.png";
+import mujtobaHall from "./assets/mujtoba-ali-hall.png";
+import ladiesHall from "./assets/ladies-hall.png";
 
 const MapSec = () => {
   const mapRef = useRef(null);
@@ -133,9 +142,9 @@ const MapSec = () => {
       await import("leaflet/dist/leaflet.css");
 
       // Define boundary points
-      const topLeft = [24.912361403380515, 91.83300018310548];
-      const bottomRight = [24.90477133957499, 91.84327840805054];
-      const center = [24.9085384, 91.8374471];
+      const topLeft = [24.932424169029986, 91.80828094482423];
+      const bottomRight = [24.90909189467807, 91.85707569122316];
+      const center = [24.921079669610492, 91.83162689208986];
 
       // Create bounds and initialize map
       const bounds = L.latLngBounds([topLeft, bottomRight]);
@@ -153,10 +162,46 @@ const MapSec = () => {
 
       // Fixed points
       const fixedPoints = [
-        { name: "Gate A", coords: [24.912361403380515, 91.83300018310548] },
-        { name: "Gate B", coords: [24.904868651039813, 91.83233499526979] },
-        { name: "Library", coords: [24.912147331056858, 91.84336423873903] },
-        { name: "Hall", coords: [24.90477133957499, 91.84327840805054] },
+        {
+          name: "Sust Gate",
+          coords: [24.911135347770895, 91.83223843574525],
+          iconUrl: gate,
+        },
+        {
+          name: "IICT",
+          coords: [24.91813148559637, 91.83094024658205],
+          iconUrl: iict,
+        },
+        {
+          name: "Chetona 71",
+          coords: [24.92066614969974, 91.8324798345566],
+          iconUrl: chetona71,
+        },
+        {
+          name: "E Building",
+          coords: [24.92036938749737, 91.83409452438356],
+          iconUrl: eBuilding,
+        },
+        {
+          name: "Central Auditorium",
+          coords: [24.924105620167428, 91.83254957199098],
+          iconUrl: audi,
+        },
+        {
+          name: "Shah Paran Hall",
+          coords: [24.924747773756355, 91.83506011962892],
+          iconUrl: shahHall,
+        },
+        {
+          name: "Mujtoba Ali Hall",
+          coords: [24.92650881416285, 91.83562874794006],
+          iconUrl: mujtobaHall,
+        },
+        {
+          name: "Ladies Hall",
+          coords: [24.92236400496206, 91.8292772769928],
+          iconUrl: ladiesHall,
+        },
       ];
 
       // Initialize ride requests
@@ -184,30 +229,26 @@ const MapSec = () => {
                 border: 2px solid white;
                 box-shadow: 0 2px 5px rgba(0,0,0,0.3);
               ">
-                <div style="
-                  position: absolute;
-                  top: 50%;
-                  left: 50%;
-                  transform: translate(-50%, -50%) rotate(45deg);
-                  width: 48px;
-                  height: 48px;
-                  border-radius: 50%;
-                  overflow: hidden;
-                  background: #fbbf24;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  color: white;
-                  font-weight: bold;
-                  font-size: 12px;
-                ">📍</div>
+              <div style="
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(45deg);
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                overflow: hidden;
+                background-image: url('${iconUrl}');
+                background-size: cover;
+                background-position: center;
+              "></div>
               </div>
             </div>
           `,
           className: "custom-marker-icon",
           iconSize: [60, 60],
           iconAnchor: [30, 60],
-          popupAnchor: [0, -60],
+          popupAnchor: [0, -40],
         });
 
         pointMarkersRef.current[pt.name] = L.marker(pt.coords, {
@@ -217,10 +258,11 @@ const MapSec = () => {
           .bindTooltip(`${pt.name}<br>Requests: 0`, {
             permanent: true,
             direction: "top",
-            offset: [0, -10],
+            offset: [0, -60],
           })
           .openTooltip();
-      });
+      }
+    );
 
       setRideRequests(initialRequests);
     };
@@ -450,7 +492,7 @@ const MapSec = () => {
         </div>
       )}
 
-       {/* Stopage points - Left Side */}
+      {/* Stopage points - Left Side */}
       <div className="m-2 grid grid-cols-2 md:grid-cols-1 gap-4 space-y-2 justify-center items-center order-1 md:order-2">
         {data2.map((item, index) => (
           <div
@@ -503,8 +545,6 @@ const MapSec = () => {
           <p>Socket: {socket.connected ? "✅ Connected" : "❌ Disconnected"}</p>
         </div>
       </div>
-
-     
 
       {/* Stopage points - Right Side */}
       <div className="m-2 grid grid-cols-2 md:grid-cols-1 gap-4 space-y-2 justify-center items-center order-3">

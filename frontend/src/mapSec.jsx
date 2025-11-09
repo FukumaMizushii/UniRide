@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import socket from "./socket";
 import Button from "./button";
 import { icon } from "leaflet";
-import gate from "./assets/sust-gate.png";
-import audi from "./assets/audi.png";
-import iict from "./assets/iict.png";
-import chetona71 from "./assets/chetona71.png";
-import eBuilding from "./assets/e-building.png";
-import shahHall from "./assets/shah-paran-hall.png";
-import mujtobaHall from "./assets/mujtoba-ali-hall.png";
-import ladiesHall from "./assets/ladies-hall.png";
+import gate from "./assets/sust-gate.jpg";
+import audi from "./assets/audi.jpg";
+import iict from "./assets/iict.jpg";
+import chetona71 from "./assets/chetona71.jpg";
+import eBuilding from "./assets/e-building.jpg";
+import shahHall from "./assets/shah-paran-hall.jpg";
+import mujtobaHall from "./assets/mujtoba-hall.jpg";
+import ladiesHall from "./assets/ladies-hall.jpg";
 
 const MapSec = () => {
   const mapRef = useRef(null);
@@ -27,59 +27,50 @@ const MapSec = () => {
 
   const data1 = [
     {
-      title: "IICT",
-      description: "Available Auto : 3",
+      title: "Central Auditorium",
       buttonText: "Book Now !",
-      point: "Gate A",
+      point: "Central Auditorium",
     },
     {
-      title: "Shah poran Hall",
-      description: "Available Auto : 5",
+      title: "Shah Paran Hall",
       buttonText: "Book Now !",
-      point: "Gate B",
+      point: "Shah Paran Hall",
     },
     {
       title: "Mujtoba Ali Hall",
-      description: "Available Auto : 2",
       buttonText: "Book Now !",
-      point: "Library",
+      point: "Mujtoba Ali Hall",
     },
     {
       title: "Ladies Hall",
-      description: "Available Auto : 4",
       buttonText: "Book Now !",
-      point: "Hall",
+      point: "Ladies Hall",
     },
   ];
 
   const data2 = [
     {
-      title: "Cafetaria",
-      description: "Available Auto : 4",
-      buttonText: "Book Now !",
-      point: "Gate A",
-    },
-    {
-      title: "D-Building",
-      description: "Available Auto : 4",
-      buttonText: "Book Now !",
-      point: "Gate B",
-    },
-    {
-      title: "UC Building",
-      description: "Available Auto : 4",
-      buttonText: "Book Now !",
-      point: "Library",
-    },
-    {
       title: "SUST Gate",
-      description: "Available Auto : 4",
       buttonText: "Book Now !",
-      point: "Hall",
+      point: "Sust Gate",
+    },
+    {
+      title: "IICT",
+      buttonText: "Book Now !",
+      point: "IICT",
+    },
+    {
+      title: "Chetona 71",
+      buttonText: "Book Now !",
+      point: "Chetona 71",
+    },
+    {
+      title: "E-Building",
+      buttonText: "Book Now !",
+      point: "E Building",
     },
   ];
 
-  // Initialize user from localStorage
   // Initialize user from localStorage
   useEffect(() => {
     // 🆕 FIX: Use consistent student ID
@@ -142,8 +133,11 @@ const MapSec = () => {
       await import("leaflet/dist/leaflet.css");
 
       // Define boundary points
-      const topLeft = [24.932424169029986, 91.80828094482423];
-      const bottomRight = [24.90909189467807, 91.85707569122316];
+      // const topLeft = [24.932424169029986, 91.80828094482423];
+      // const bottomRight = [24.90909189467807, 91.85707569122316];
+      const topLeft = [24.948398100077377, 91.79677963256837];
+      const bottomRight = [24.896402266558727, 91.86355590820314];
+
       const center = [24.921079669610492, 91.83162689208986];
 
       // Create bounds and initialize map
@@ -151,14 +145,18 @@ const MapSec = () => {
       mapInstance.current = L.map(mapRef.current).setView(center, 16);
 
       // Add tile layer
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "OpenStreetMap",
+      // L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      //   attribution: "OpenStreetMap",
+      // }).addTo(mapInstance.current);
+
+      L.tileLayer("https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png", {
+        attribution: "© Wikimedia",
       }).addTo(mapInstance.current);
 
       // Apply bounds restrictions
       mapInstance.current.fitBounds(bounds);
-      mapInstance.current.setMaxBounds(bounds);
-      mapInstance.current.setMinZoom(15);
+      // mapInstance.current.setMaxBounds(bounds);
+      // mapInstance.current.setMinZoom(15);
 
       // Fixed points
       const fixedPoints = [
@@ -238,7 +236,7 @@ const MapSec = () => {
                 height: 48px;
                 border-radius: 50%;
                 overflow: hidden;
-                background-image: url('${iconUrl}');
+                background-image: url('${pt.iconUrl}');
                 background-size: cover;
                 background-position: center;
               "></div>
@@ -255,14 +253,23 @@ const MapSec = () => {
           icon: customIcon,
         })
           .addTo(mapInstance.current)
-          .bindTooltip(`${pt.name}<br>Requests: 0`, {
-            permanent: true,
-            direction: "top",
-            offset: [0, -60],
-          })
+          .bindTooltip(`
+              <div style="
+                font-weight: bold;
+                text-align: center;
+              ">
+                <span style="color: red">${pt.name}</span><br>
+                <span style="color: black">Requests: 0</span>
+              </div>
+            `,{
+              permanent: true,
+              direction: "top",
+              offset: [0, -60],
+              className: "custom-tooltip",
+            }
+          )
           .openTooltip();
-      }
-    );
+      });
 
       setRideRequests(initialRequests);
     };
@@ -297,7 +304,7 @@ const MapSec = () => {
         html: `
         <div style="
           display: flex;
-          align-items: center;
+          align-items: end;
           justify-content: center;
           font-size: 30px;
           filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
@@ -327,10 +334,10 @@ const MapSec = () => {
         }).addTo(mapInstance.current).bindPopup(`
         <div style="text-align: center;">
           <strong>🚗 Driver</strong><br>
-          <b>${name}</b><br>
           ID: ${driverId}
-        </div>
-      `);
+          </div>
+          `);
+          // <b>${name}</b><br>
 
         console.log("✅ Added new driver marker:", driverId);
       }
@@ -352,7 +359,7 @@ const MapSec = () => {
         else if (requestsCount >= 1) color = "#ea580c";
 
         pointMarkersRef.current[point].setTooltipContent(`
-        <div style="color:${color}; text-align:center;">
+        <div style="color:red; text-align:center; font-weight:bold;">
           <strong>${point}</strong><br>
           📍 Requests: <b>${requestsCount}</b>
         </div>
@@ -379,7 +386,7 @@ const MapSec = () => {
       setHasActiveRequest(false);
       setCurrentRequestPoint(null);
       setRequestError("");
-      alert(`🚗 Driver ${data.driverName} accepted your ride at ${data.point}`);
+      alert(`🚗 ${data.driverName} accepted your ride at ${data.point}`);
 
       // Reset requests for that point
       setRideRequests((prev) => ({

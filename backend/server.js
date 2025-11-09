@@ -19,10 +19,38 @@ app.use(express.urlencoded({ extended: true }));
 // Your existing backend logic
 const users = {};
 const fixedPoints = [
-  { name: "Gate A", coords: [24.912361403380515, 91.83300018310548] },
-  { name: "Gate B", coords: [24.904868651039813, 91.83233499526979] },
-  { name: "Library", coords: [24.912147331056858, 91.84336423873903] },
-  { name: "Hall", coords: [24.90477133957499, 91.84327840805054] },
+  { 
+    name: "Sust Gate", 
+    coords: [24.911135347770895, 91.83223843574525] 
+  },
+  { 
+    name: "IICT", 
+    coords: [24.91813148559637, 91.83094024658205] 
+  },
+  { 
+    name: "Chetona 71", 
+    coords: [24.92066614969974, 91.8324798345566] 
+  },
+  { 
+    name: "E Building", 
+    coords: [24.92036938749737, 91.83409452438356] 
+  },
+  { 
+    name: "Central Auditorium", 
+    coords: [24.924105620167428, 91.83254957199098] 
+  },
+  { 
+    name: "Shah Paran Hall", 
+    coords: [24.924747773756355, 91.83506011962892] 
+  },
+  { 
+    name: "Mujtoba Ali Hall", 
+    coords: [24.92650881416285, 91.83562874794006] 
+  },
+  { 
+    name: "Ladies Hall", 
+    coords: [24.92236400496206, 91.8292772769928] 
+  },
 ];
 
 const rideRequests = {};
@@ -179,36 +207,40 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("disconnect", () => {
-    const entry = Object.entries(users).find(
-      ([id, info]) => info.socketID === socket.id
-    );
-    if (entry) {
-      const [permanentID, user] = entry;
-      console.log(`❌ User Disconnected: ${user.username} (${permanentID})`);
+socket.on("disconnect", () => {
+  const entry = Object.entries(users).find(
+    ([id, info]) => info.socketID === socket.id
+  );
+  if (entry) {
+    const [permanentID, user] = entry;
+    console.log(`❌ User Disconnected: ${user.username} (${permanentID})`);
 
-      // 🆕 CLEANUP ACTIVE REQUESTS ON DISCONNECT
-      if (studentActiveRequests[permanentID]) {
-        const point = studentActiveRequests[permanentID];
-        console.log(
-          `🧹 Cleaning up active request for disconnected student: ${permanentID} at ${point}`
-        );
+    // 🆕 FIX: Remove driver from users object completely
+    delete users[permanentID];
+    console.log(`🗑️ Removed user ${permanentID} from active users`);
 
-        // Remove from ride requests
-        const pointRequests = rideRequests[point] || [];
-        rideRequests[point] = pointRequests.filter((id) => id !== permanentID);
+    // 🆕 CLEANUP ACTIVE REQUESTS ON DISCONNECT
+    if (studentActiveRequests[permanentID]) {
+      const point = studentActiveRequests[permanentID];
+      console.log(`🧹 Cleaning up active request for disconnected student: ${permanentID} at ${point}`);
 
-        // Remove from active requests
-        delete studentActiveRequests[permanentID];
+      // Remove from ride requests
+      const pointRequests = rideRequests[point] || [];
+      rideRequests[point] = pointRequests.filter((id) => id !== permanentID);
 
-        // Notify drivers about cancelled request
-        io.emit("ride-request-cancelled", { studentId: permanentID, point });
-      }
+      // Remove from active requests
+      delete studentActiveRequests[permanentID];
 
-      io.emit("user-disconnected", permanentID);
-      users[permanentID].socketID = null;
+      // Notify drivers about cancelled request
+      io.emit("ride-request-cancelled", { studentId: permanentID, point });
     }
-  });
+
+    // Notify all clients to remove marker
+    io.emit("user-disconnected", permanentID);
+  } else {
+    console.log(`❌ Socket Disconnected (unregistered): ${socket.id}`);
+  }
+});
 });
 
 // FIX: Remove the problematic catch-all route for now

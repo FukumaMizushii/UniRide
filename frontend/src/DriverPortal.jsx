@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import socket from "./socket";
 import Button from "./button";
+import { icon } from "leaflet";
+import gate from "./assets/sust-gate.jpg";
+import audi from "./assets/audi.jpg";
+import iict from "./assets/iict.jpg";
+import chetona71 from "./assets/chetona71.jpg";
+import eBuilding from "./assets/e-building.jpg";
+import shahHall from "./assets/shah-paran-hall.jpg";
+import mujtobaHall from "./assets/mujtoba-hall.jpg";
+import ladiesHall from "./assets/ladies-hall.jpg";
 
 const DriverPortal = () => {
   const mapRef = useRef(null);
@@ -14,17 +23,41 @@ const DriverPortal = () => {
   const [driverLocation, setDriverLocation] = useState(null);
 
   const data1 = [
-    { title: "IICT", point: "Gate A" },
-    { title: "Shah poran Hall", point: "Gate B" },
-    { title: "Mujtoba Ali Hall", point: "Library" },
-    { title: "Ladies Hall", point: "Hall" },
+    {
+      title: "Central Auditorium",
+      point: "Central Auditorium", // ✅ Match fixedPoints name
+    },
+    {
+      title: "Shah Paran Hall",
+      point: "Shah Paran Hall", // ✅ Match fixedPoints name
+    },
+    {
+      title: "Mujtoba Ali Hall",
+      point: "Mujtoba Ali Hall", // ✅ Match fixedPoints name
+    },
+    {
+      title: "Ladies Hall",
+      point: "Ladies Hall", // ✅ Match fixedPoints name
+    },
   ];
 
   const data2 = [
-    { title: "Cafetaria", point: "Gate A" },
-    { title: "D-Building", point: "Gate B" },
-    { title: "UC Building", point: "Library" },
-    { title: "SUST Gate", point: "Hall" },
+    {
+      title: "SUST Gate",
+      point: "Sust Gate", // ✅ Match fixedPoints name
+    },
+    {
+      title: "IICT",
+      point: "IICT", // ✅ Match fixedPoints name
+    },
+    {
+      title: "Chetona 71",
+      point: "Chetona 71", // ✅ Match fixedPoints name
+    },
+    {
+      title: "E-Building",
+      point: "E Building", // ✅ Match fixedPoints name
+    },
   ];
 
   // Initialize user from localStorage
@@ -82,8 +115,10 @@ const DriverPortal = () => {
 
       // Define boundary points
       // const topLeft = [24.912361403380515, 91.83300018310548];
-      const topLeft = [24.932424169029986, 91.80828094482423];
-      const bottomRight = [24.90909189467807, 91.85707569122316];
+      // const topLeft = [24.932424169029986, 91.80828094482423];
+      // const bottomRight = [24.90909189467807, 91.85707569122316];
+      const topLeft = [24.948398100077377, 91.79677963256837];
+      const bottomRight = [24.896402266558727, 91.86355590820314];
       const center = [24.921079669610492, 91.83162689208986];
 
       // Create bounds and initialize map
@@ -91,21 +126,61 @@ const DriverPortal = () => {
       mapInstance.current = L.map(mapRef.current).setView(center, 16);
 
       // Add tile layer
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "OpenStreetMap",
+      // L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      //   attribution: "OpenStreetMap",
+      // }).addTo(mapInstance.current);
+
+      L.tileLayer("https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png", {
+        attribution: "© Wikimedia",
       }).addTo(mapInstance.current);
 
       // Apply bounds restrictions
       mapInstance.current.fitBounds(bounds);
-      mapInstance.current.setMaxBounds(bounds);
-      mapInstance.current.setMinZoom(15);
+      // mapInstance.current.setMaxBounds(bounds);
+      // mapInstance.current.setMinZoom(15);
 
       // Fixed points
       const fixedPoints = [
-        { name: "Gate A", coords: [24.912361403380515, 91.83300018310548] },
-        { name: "Gate B", coords: [24.904868651039813, 91.83233499526979] },
-        { name: "Library", coords: [24.912147331056858, 91.84336423873903] },
-        { name: "Hall", coords: [24.90477133957499, 91.84327840805054] },
+        {
+          name: "Sust Gate",
+          coords: [24.911135347770895, 91.83223843574525],
+          iconUrl: gate,
+        },
+        {
+          name: "IICT",
+          coords: [24.91813148559637, 91.83094024658205],
+          iconUrl: iict,
+        },
+        {
+          name: "Chetona 71",
+          coords: [24.92066614969974, 91.8324798345566],
+          iconUrl: chetona71,
+        },
+        {
+          name: "E Building",
+          coords: [24.92036938749737, 91.83409452438356],
+          iconUrl: eBuilding,
+        },
+        {
+          name: "Central Auditorium",
+          coords: [24.924105620167428, 91.83254957199098],
+          iconUrl: audi,
+        },
+        {
+          name: "Shah Paran Hall",
+          coords: [24.924747773756355, 91.83506011962892],
+          iconUrl: shahHall,
+        },
+        {
+          name: "Mujtoba Ali Hall",
+          coords: [24.92650881416285, 91.83562874794006],
+          iconUrl: mujtobaHall,
+        },
+        {
+          name: "Ladies Hall",
+          coords: [24.92236400496206, 91.8292772769928],
+          iconUrl: ladiesHall,
+        },
       ];
 
       // Initialize ride requests and point markers
@@ -113,6 +188,7 @@ const DriverPortal = () => {
       fixedPoints.forEach((pt) => {
         initialRequests[pt.name] = 0;
 
+        // Create custom icon for points
         const customIcon = L.divIcon({
           html: `
             <div style="
@@ -132,41 +208,46 @@ const DriverPortal = () => {
                 border: 2px solid white;
                 box-shadow: 0 2px 5px rgba(0,0,0,0.3);
               ">
-                <div style="
-                  position: absolute;
-                  top: 50%;
-                  left: 50%;
-                  transform: translate(-50%, -50%) rotate(45deg);
-                  width: 48px;
-                  height: 48px;
-                  border-radius: 50%;
-                  overflow: hidden;
-                  background: #fbbf24;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  color: white;
-                  font-weight: bold;
-                  font-size: 12px;
-                ">📍</div>
+              <div style="
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(45deg);
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                overflow: hidden;
+                background-image: url('${pt.iconUrl}');
+                background-size: cover;
+                background-position: center;
+              "></div>
               </div>
             </div>
           `,
           className: "custom-marker-icon",
           iconSize: [60, 60],
           iconAnchor: [30, 60],
-          popupAnchor: [0, -60],
+          popupAnchor: [0, -40],
         });
 
         pointMarkersRef.current[pt.name] = L.marker(pt.coords, {
           icon: customIcon,
         })
           .addTo(mapInstance.current)
-          .bindTooltip(`${pt.name}<br>Requests: 0`, {
-            permanent: true,
-            direction: "top",
-            offset: [0, -10],
-          })
+          .bindTooltip(
+            `              <div style="
+                font-weight: bold;
+                text-align: center;
+              ">
+                <span style="color: red">${pt.name}</span><br>
+                <span style="color: black">Requests: 0</span>
+              </div>`,
+            {
+              permanent: true,
+              direction: "top",
+              offset: [0, -60],
+            }
+          )
           .openTooltip();
       });
 
@@ -193,7 +274,7 @@ const DriverPortal = () => {
       html: `
       <div style="
         display: flex;
-        align-items: center;
+        align-items: end;
         justify-content: center;
         font-size: 30px;
         filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
@@ -229,12 +310,12 @@ const DriverPortal = () => {
         `
     <div style="text-align: center;">
       <strong>🚗 You (Driver)</strong><br>
-      <b>${userName}</b><br>
       ID: ${savedID}
-    </div>
-  `
+      </div>
+      `
       )
       .openPopup();
+      // <b>${userName}</b><br>
 
     // Center map on current driver
     mapInstance.current.setView(
@@ -262,7 +343,7 @@ const DriverPortal = () => {
         html: `
         <div style="
           display: flex;
-          align-items: center;
+          align-items: end;
           justify-content: center;
           font-size: 30px;
           filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
@@ -292,10 +373,10 @@ const DriverPortal = () => {
         }).addTo(mapInstance.current).bindPopup(`
         <div style="text-align: center;">
           <strong>🚗 Other Driver</strong><br>
-          <b>${name}</b><br>
           ID: ${driverId}
-        </div>
-      `);
+          </div>
+          `);
+          // <b>${name}</b><br>
 
         console.log("✅ Added other driver marker:", driverId);
       }
@@ -317,7 +398,7 @@ const DriverPortal = () => {
         else if (requestsCount >= 1) color = "#ea580c";
 
         pointMarkersRef.current[point].setTooltipContent(`
-        <div style="color:${color}; text-align:center;">
+        <div style="color:red; text-align:center; font-weight:bold;">
           <strong>${point}</strong><br>
           📍 Requests: <b>${requestsCount}</b>
         </div>
@@ -375,7 +456,7 @@ const DriverPortal = () => {
       point: pointName,
     });
     console.log(`Accepted requests at ${pointName}`);
-    alert(`✅ You accepted ride requests at ${pointName}`);
+    alert(`✅ You set ${pointName} as your next stopage!`);
   };
 
   return (
@@ -392,7 +473,7 @@ const DriverPortal = () => {
               Requests: <b>{rideRequests[item.point] || 0}</b>
             </p>
             <Button
-              messeage="Accept Ride"
+              messeage="Set as next stopage"
               onClick={() => acceptRide(item.point)}
             />
           </div>
@@ -425,20 +506,23 @@ const DriverPortal = () => {
       </div>
 
       {/* Stopage points - Right Side */}
-      <div className=' m-2 grid grid-cols-2 md:grid-cols-1 gap-4 space-y-2 justify-center items-center order-3 '>
+      <div className=" m-2 grid grid-cols-2 md:grid-cols-1 gap-4 space-y-2 justify-center items-center order-3 ">
         {data1.map((item, index) => (
-          <div key={index} className="bg-[#00b4d8] p-6 rounded-2xl shadow-blue-400 shadow-2xl flex flex-col justify-center items-center sm:space-y-6 space-y-5">
+          <div
+            key={index}
+            className="bg-[#00b4d8] p-6 rounded-2xl shadow-blue-400 shadow-2xl flex flex-col justify-center items-center sm:space-y-6 space-y-5"
+          >
             <h2 className="text-xl font-bold mb-2">{item.title}</h2>
             <p className="text-sm">
               Requests: <b>{rideRequests[item.point] || 0}</b>
             </p>
-            <Button 
-              messeage="Accept Ride" 
+            <Button
+              messeage="Set as next stopage"
               onClick={() => acceptRide(item.point)}
             />
           </div>
         ))}
-      </div> 
+      </div>
     </div>
   );
 };

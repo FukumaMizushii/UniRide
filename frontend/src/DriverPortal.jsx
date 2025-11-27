@@ -25,38 +25,38 @@ const DriverPortal = () => {
   const data1 = [
     {
       title: "Central Auditorium",
-      point: "Central Auditorium", // ✅ Match fixedPoints name
+      point: "Central Auditorium", 
     },
     {
       title: "Shah Paran Hall",
-      point: "Shah Paran Hall", // ✅ Match fixedPoints name
+      point: "Shah Paran Hall", 
     },
     {
       title: "Mujtoba Ali Hall",
-      point: "Mujtoba Ali Hall", // ✅ Match fixedPoints name
+      point: "Mujtoba Ali Hall", 
     },
     {
       title: "Ladies Hall",
-      point: "Ladies Hall", // ✅ Match fixedPoints name
+      point: "Ladies Hall", 
     },
   ];
 
   const data2 = [
     {
       title: "SUST Gate",
-      point: "Sust Gate", // ✅ Match fixedPoints name
+      point: "Sust Gate", 
     },
     {
       title: "IICT",
-      point: "IICT", // ✅ Match fixedPoints name
+      point: "IICT", 
     },
     {
       title: "Chetona 71",
-      point: "Chetona 71", // ✅ Match fixedPoints name
+      point: "Chetona 71", 
     },
     {
       title: "E-Building",
-      point: "E Building", // ✅ Match fixedPoints name
+      point: "E Building", 
     },
   ];
 

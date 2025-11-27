@@ -8,7 +8,7 @@ const server = http.createServer(app);
 const io = socketio(server, {
   cors: {
     origin: "*", // Allow all origins
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST"], 
   },
 });
 

@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -26,11 +25,11 @@ const userSchema = new mongoose.Schema({
   },
   studentId: {
     type: String,
-    sparse: true // Allows null for drivers
+    sparse: true
   },
   autoId: {
     type: String,
-    sparse: true // Allows null for students
+    sparse: true
   },
   isOnline: {
     type: Boolean,
@@ -40,21 +39,18 @@ const userSchema = new mongoose.Schema({
     latitude: Number,
     longitude: Number,
     lastUpdated: Date
+  },
+  lastSeen: {
+    type: Date,
+    default: Date.now
   }
 }, {
   timestamps: true
 });
 
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
-});
-
-// Compare password method
+// Simple password comparison (for testing)
 userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
+  return candidatePassword === this.password;
 };
 
 module.exports = mongoose.model('User', userSchema);

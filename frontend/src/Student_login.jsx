@@ -9,20 +9,45 @@ const StudentLg = () => {
   const [studentID, setStudentID] = useState("");
   const [password, setPassword] = useState("");
 
+  // Replace the handleSubmit function
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (studentID && password) {
       try {
-        // Register with backend
-        socket.emit("register-user", {
-          id: studentID,
-          name: `Student_${studentID}`,
-          role: "student",
+        const response = await fetch("http://localhost:5500/api/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: studentID + "@sust.edu", // or use actual email field
+            password: password,
+            role: "student",
+          }),
         });
 
-        navigate("/points");
+        const data = await response.json();
+
+        if (data.success) {
+          // Store user info
+          localStorage.setItem("user_id", data.user.id);
+          localStorage.setItem("user_name", data.user.name);
+          localStorage.setItem("user_role", data.user.role);
+
+          // Register with socket
+          socket.emit("register-user", {
+            id: data.user.id,
+            name: data.user.name,
+            role: data.user.role,
+          });
+
+          navigate("/points");
+        } else {
+          alert(data.message || "Login failed!");
+        }
       } catch (error) {
+        console.error("Login error:", error);
         alert("Login failed!");
       }
     } else {

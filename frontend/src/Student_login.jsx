@@ -6,90 +6,98 @@ import { FaCarSide } from "react-icons/fa";
 
 const StudentLg = () => {
   const navigate = useNavigate();
-  const [studentID, setStudentID] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({
+    email: "",
+    password: ""
+  });
+  const [loading, setLoading] = useState(false);
 
-  // Replace the handleSubmit function
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    if (studentID && password) {
-      try {
-        const response = await fetch("http://localhost:5500/api/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: studentID + "@sust.edu", // or use actual email field
-            password: password,
-            role: "student",
-          }),
+    if (!formData.email || !formData.password) {
+      alert("Please fill all fields!");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:5500/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          role: "student",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Store user info
+        localStorage.setItem("user_id", data.user.id);
+        localStorage.setItem("user_name", data.user.name);
+        localStorage.setItem("user_role", data.user.role);
+
+        // Register with socket
+        socket.emit("register-user", {
+          id: data.user.id,
+          name: data.user.name,
+          role: data.user.role,
         });
 
-        const data = await response.json();
-
-        if (data.success) {
-          // Store user info
-          localStorage.setItem("user_id", data.user.id);
-          localStorage.setItem("user_name", data.user.name);
-          localStorage.setItem("user_role", data.user.role);
-
-          // Register with socket
-          socket.emit("register-user", {
-            id: data.user.id,
-            name: data.user.name,
-            role: data.user.role,
-          });
-
-          navigate("/points");
-        } else {
-          alert(data.message || "Login failed!");
-        }
-      } catch (error) {
-        console.error("Login error:", error);
-        alert("Login failed!");
+        console.log("✅ Student logged in:", data.user.name);
+        navigate("/points");
+      } else {
+        alert(data.message || "Login failed!");
       }
-    } else {
-      alert("Please fill the form!");
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Login failed! Please check your connection.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="flex flex-col justify-center items-center bg-[#cbbfc1] p-10 rounded-2xl m-5 shadow-2xl">
       <div className="flex flex-col justify-center items-center mb-4">
-        <FaCarSide className="font-bold text-9xl  text-[#ff006e]" />
-        <section className="text-3xl font-bold text-[#ff006e]">
-          {" "}
-          UniRide
-        </section>
-
-        <h2 className="text-4xl font-bold mb-4 text-[#2b2d42] pt-5">
-          Student Login
-        </h2>
+        <FaCarSide className="font-bold text-9xl text-[#ff006e]" />
+        <section className="text-3xl font-bold text-[#ff006e]">UniRide</section>
+        <h2 className="text-4xl font-bold mb-4 text-[#2b2d42] pt-5">Student Login</h2>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col justify-center items-center space-y-4"
-      >
+      <form onSubmit={handleSubmit} className="flex flex-col justify-center items-center space-y-4">
         <input
-          type="text"
-          placeholder="Student ID"
-          value={studentID}
-          onChange={(e) => setStudentID(e.target.value)}
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={handleChange}
           className="w-84 bg-white border-black px-4 py-2 border-2 border-dashed rounded-lg focus:outline-none shadow-2xl"
-          required
+          required 
         />
         <input
           type="password"
+          name="password"
           placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={formData.password}
+          onChange={handleChange}
           className="w-84 bg-white border-black px-4 py-2 border-2 border-dashed rounded-lg focus:outline-none shadow-2xl"
           required
         />
-        <Button messeage={"Log in"} />
+        <Button 
+          messeage={loading ? "Logging in..." : "Log in"} 
+          disabled={loading}
+        />
       </form>
     </div>
   );

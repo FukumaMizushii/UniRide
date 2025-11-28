@@ -89,19 +89,50 @@ app.get("/api/points", (req, res) => {
 });
 
 // User Registration
+// ✅ FIXED: User Registration - Allow multiple users properly
 app.post("/api/register", async (req, res) => {
   try {
     const { name, email, password, role, studentId, autoId } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({
-      $or: [{ email }, { studentId }, { autoId }].filter(Boolean),
+    console.log("📝 Registration attempt:", {
+      name,
+      email,
+      role,
+      studentId,
+      autoId,
     });
 
+    // ✅ FIX: Build proper query based on role
+    let query = { email };
+
+    if (role === "student" && studentId) {
+      // For students, check if email OR studentId exists
+      query = { $or: [{ email }, { studentId }] };
+    } else if (role === "driver" && autoId) {
+      // For drivers, check if email OR autoId exists
+      query = { $or: [{ email }, { autoId }] };
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne(query);
+
     if (existingUser) {
+      let message = "User already exists with this ";
+
+      if (existingUser.email === email) {
+        message += "email";
+      } else if (role === "student" && existingUser.studentId === studentId) {
+        message += "student ID";
+      } else if (role === "driver" && existingUser.autoId === autoId) {
+        message += "auto ID";
+      } else {
+        message += "credentials";
+      }
+
+      console.log("❌ Registration failed:", message);
       return res.status(400).json({
         success: false,
-        message: "User already exists with this email/ID",
+        message,
       });
     }
 
@@ -109,13 +140,14 @@ app.post("/api/register", async (req, res) => {
     const user = new User({
       name,
       email,
-      password,
+      password, // This will be hashed by the pre-save hook
       role,
-      studentId: role === "student" ? studentId : null,
-      autoId: role === "driver" ? autoId : null,
+      studentId: role === "student" ? studentId : undefined,
+      autoId: role === "driver" ? autoId : undefined,
     });
 
     await user.save();
+    console.log("✅ User registered successfully:", user.email);
 
     res.json({
       success: true,
@@ -129,31 +161,45 @@ app.post("/api/register", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Registration error:", error);
+    console.error("❌ Registration error:", error);
     res.status(500).json({
       success: false,
-      message: "Registration failed",
+      message: "Registration failed - " + error.message,
     });
   }
 });
 
 // User Login
+// ✅ FIXED: User Login
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password, role } = req.body;
 
-    // Find user by email and role
-    const user = await User.findOne({ email, role });
+    console.log("🔐 Login attempt:", { email, role });
+
+    // Find user by email
+    const user = await User.findOne({ email });
     if (!user) {
+      console.log("❌ User not found:", email);
       return res.status(400).json({
         success: false,
         message: "Invalid credentials",
       });
     }
 
+    // Check if role matches
+    if (user.role !== role) {
+      console.log("❌ Role mismatch:", user.role, "!=", role);
+      return res.status(400).json({
+        success: false,
+        message: `Invalid credentials for ${role} role`,
+      });
+    }
+
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
+      console.log("❌ Invalid password for:", email);
       return res.status(400).json({
         success: false,
         message: "Invalid credentials",
@@ -162,7 +208,10 @@ app.post("/api/login", async (req, res) => {
 
     // Update user as online
     user.isOnline = true;
+    user.lastSeen = new Date();
     await user.save();
+
+    console.log("✅ Login successful:", user.email);
 
     res.json({
       success: true,
@@ -176,7 +225,7 @@ app.post("/api/login", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("❌ Login error:", error);
     res.status(500).json({
       success: false,
       message: "Login failed",
@@ -184,6 +233,59 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// Debug endpoints
+app.get("/api/debug/users", async (req, res) => {
+  try {
+    const users = await User.find({});
+    res.json({
+      success: true,
+      count: users.length,
+      users: users.map((u) => ({
+        id: u._id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        studentId: u.studentId,
+        autoId: u.autoId,
+        isOnline: u.isOnline,
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get("/api/debug/ride-requests", async (req, res) => {
+  try {
+    const requests = await RideRequest.find({})
+      .populate("student", "name email")
+      .populate("driver", "name email");
+
+    res.json({
+      success: true,
+      count: requests.length,
+      requests: requests,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete("/api/debug/clear-users", async (req, res) => {
+  try {
+    await User.deleteMany({});
+    await RideRequest.deleteMany({});
+
+    // Reset in-memory storage
+    Object.keys(rideRequests).forEach((point) => {
+      rideRequests[point] = [];
+    });
+
+    res.json({ success: true, message: "All users and ride requests cleared" });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 // Serve static files
 app.use(express.static(path.join(__dirname, "../dist")));
 
@@ -237,13 +339,21 @@ io.on("connection", (socket) => {
   );
 
   // Enhanced ride request with database
+  // ✅ FIXED: Enhanced ride request with proper database handling
   socket.on("request-ride", async ({ studentId, point }) => {
     try {
       console.log(
         `🔍 Ride request from student: ${studentId} for point: ${point}`
       );
 
-      // Check if student already has active request
+      // Validate point exists
+      if (!rideRequests[point]) {
+        console.log(`❌ Invalid point: ${point}`);
+        socket.emit("request-error", { message: "Invalid pickup point" });
+        return;
+      }
+
+      // Check if student already has active request in database
       const activeRequest = await RideRequest.findOne({
         student: studentId,
         status: { $in: ["pending", "accepted"] },
@@ -252,14 +362,8 @@ io.on("connection", (socket) => {
       if (activeRequest) {
         console.log(`🚫 Student ${studentId} already has active request`);
         socket.emit("request-error", {
-          message: `You already have an active ride request`,
+          message: `You already have an active ride request at ${activeRequest.point}`,
         });
-        return;
-      }
-
-      if (!rideRequests[point]) {
-        console.log(`❌ Invalid point: ${point}`);
-        socket.emit("request-error", { message: "Invalid pickup point" });
         return;
       }
 
@@ -273,9 +377,12 @@ io.on("connection", (socket) => {
       await rideRequest.save();
 
       // Update in-memory storage for real-time updates
-      rideRequests[point].push(studentId);
+      if (!rideRequests[point].includes(studentId)) {
+        rideRequests[point].push(studentId);
+      }
 
       console.log(`✅ Request stored - Student: ${studentId}, Point: ${point}`);
+      console.log(`📊 Current requests at ${point}:`, rideRequests[point]);
 
       // Notify student of success
       socket.emit("request-success", {
@@ -288,9 +395,16 @@ io.on("connection", (socket) => {
         studentId,
         point,
         requestId: rideRequest._id,
+        requestsCount: rideRequests[point].length,
+      });
+
+      // Update point marker tooltip
+      io.emit("update-point-requests", {
+        point,
+        requestsCount: rideRequests[point].length,
       });
     } catch (error) {
-      console.error("Error creating ride request:", error);
+      console.error("❌ Error creating ride request:", error);
       socket.emit("request-error", {
         message: "Failed to create ride request",
       });
@@ -425,14 +539,5 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 5500;
-// server.listen(PORT, () => {
-//   console.log(`🚀 Backend Server running at http://localhost:${PORT}`);
-//   console.log(`📡 Socket.io ready for connections`);
-//   console.log(
-//     `🗄️  MongoDB connected: ${
-//       mongoose.connection.readyState === 1 ? "✅" : "❌"
-//     }`
-//   );
-// });
 
 // sudo kill -9 $(sudo lsof -t -i:5500)

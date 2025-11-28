@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -48,9 +49,22 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Simple password comparison (for testing)
+// ✅ FIX: Add proper password hashing
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return; // no next()
+
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+});
+
+
+// ✅ FIX: Proper password comparison
 userSchema.methods.comparePassword = async function(candidatePassword) {
-  return candidatePassword === this.password;
+  try {
+    return await bcrypt.compare(candidatePassword, this.password);
+  } catch (error) {
+    throw new Error('Password comparison failed');
+  }
 };
 
 module.exports = mongoose.model('User', userSchema);

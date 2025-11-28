@@ -9,7 +9,10 @@ import StudentLg from "./Student_login";
 import DriverLg from "./Driver_login";
 import DriverPortal from "./DriverPortal";
 import Help from "./help";
+import SignupForm from "./signupForm";
 import Button from "./button";
+import SignupFormDriver from "./driverSignup";
+
 
 
 function App() {
@@ -23,6 +26,8 @@ function App() {
         <Route path="/driver" element={ <DriverLg />} />
         <Route path="/help" element={ <Help />} />   
         <Route path="/driverPortal" element={ <DriverPortal />} />
+        <Route path="/studentsu" element={ <SignupForm />} />
+        <Route path="/driversu" element={ <SignupFormDriver />} />
 
 
         <Route path="/" element={

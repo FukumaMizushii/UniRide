@@ -24,61 +24,65 @@ const MapSec = () => {
   const [hasActiveRequest, setHasActiveRequest] = useState(false);
   const [currentRequestPoint, setCurrentRequestPoint] = useState(null);
   const [requestError, setRequestError] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const data1 = [
-    {
-      title: "Central Auditorium",
-      buttonText: "Book Now !",
-      point: "Central Auditorium",
-    },
-    {
-      title: "Shah Paran Hall",
-      buttonText: "Book Now !",
-      point: "Shah Paran Hall",
-    },
-    {
-      title: "Mujtoba Ali Hall",
-      buttonText: "Book Now !",
-      point: "Mujtoba Ali Hall",
-    },
-    {
-      title: "Ladies Hall",
-      buttonText: "Book Now !",
-      point: "Ladies Hall",
-    },
-  ];
-
-  const data2 = [
+  const allPoints = [
     {
       title: "SUST Gate",
       buttonText: "Book Now !",
       point: "Sust Gate",
+      category: "gate"
     },
     {
       title: "IICT",
       buttonText: "Book Now !",
       point: "IICT",
+      category: "academic"
     },
     {
       title: "Chetona 71",
       buttonText: "Book Now !",
       point: "Chetona 71",
+      category: "landmark"
     },
     {
       title: "E-Building",
       buttonText: "Book Now !",
       point: "E Building",
+      category: "academic"
+    },
+    {
+      title: "Central Auditorium",
+      buttonText: "Book Now !",
+      point: "Central Auditorium",
+      category: "auditorium"
+    },
+    {
+      title: "Shah Paran Hall",
+      buttonText: "Book Now !",
+      point: "Shah Paran Hall",
+      category: "hall"
+    },
+    {
+      title: "Mujtoba Ali Hall",
+      buttonText: "Book Now !",
+      point: "Mujtoba Ali Hall",
+      category: "hall"
+    },
+    {
+      title: "Ladies Hall",
+      buttonText: "Book Now !",
+      point: "Ladies Hall",
+      category: "hall"
     },
   ];
 
   // Initialize user from localStorage
   useEffect(() => {
-    // 🆕 FIX: Use consistent student ID
     let savedID = localStorage.getItem("user_id");
     let userName = localStorage.getItem("user_name");
 
     if (!savedID) {
-      // Only create new ID if it doesn't exist
       savedID = "student_" + Math.random().toString(36).substr(2, 9);
       localStorage.setItem("user_id", savedID);
     }
@@ -94,7 +98,6 @@ const MapSec = () => {
 
     console.log("🎯 Student initialized with ID:", savedID);
 
-    // Register with socket
     socket.emit("register-user", {
       id: savedID,
       name: userName,
@@ -115,6 +118,9 @@ const MapSec = () => {
       studentId: savedID,
       point: pointName,
     });
+    
+    // Close dropdown after selection
+    setIsDropdownOpen(false);
   };
 
   const cancelRequest = () => {
@@ -132,33 +138,19 @@ const MapSec = () => {
       const L = await import("leaflet");
       await import("leaflet/dist/leaflet.css");
 
-      // Define boundary points
-      // const topLeft = [24.932424169029986, 91.80828094482423];
-      // const bottomRight = [24.90909189467807, 91.85707569122316];
       const topLeft = [24.948398100077377, 91.79677963256837];
       const bottomRight = [24.896402266558727, 91.86355590820314];
-
       const center = [24.921079669610492, 91.83162689208986];
 
-      // Create bounds and initialize map
       const bounds = L.latLngBounds([topLeft, bottomRight]);
       mapInstance.current = L.map(mapRef.current).setView(center, 16);
-
-      // Add tile layer
-      // L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      //   attribution: "OpenStreetMap",
-      // }).addTo(mapInstance.current);
 
       L.tileLayer("https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png", {
         attribution: "© Wikimedia",
       }).addTo(mapInstance.current);
 
-      // Apply bounds restrictions
       mapInstance.current.fitBounds(bounds);
-      // mapInstance.current.setMaxBounds(bounds);
-      // mapInstance.current.setMinZoom(15);
 
-      // Fixed points
       const fixedPoints = [
         {
           name: "Sust Gate",
@@ -202,12 +194,10 @@ const MapSec = () => {
         },
       ];
 
-      // Initialize ride requests
       const initialRequests = {};
       fixedPoints.forEach((pt) => {
         initialRequests[pt.name] = 0;
 
-        // Create custom icon for points
         const customIcon = L.divIcon({
           html: `
             <div style="
@@ -285,7 +275,6 @@ const MapSec = () => {
 
   // Socket Event Handlers
   useEffect(() => {
-    // Receive driver locations
     const handleDriverLocation = (data) => {
       const { driverId, latitude, longitude, name } = data;
       console.log("📍 Received driver location:", {
@@ -299,7 +288,6 @@ const MapSec = () => {
 
       const L = window.L;
 
-      // Create car icon for drivers
       const carIcon = L.divIcon({
         html: `
         <div style="
@@ -324,11 +312,9 @@ const MapSec = () => {
       });
 
       if (markersRef.current[driverId]) {
-        // Update existing marker
         markersRef.current[driverId].setLatLng([latitude, longitude]);
         console.log("🔄 Updated driver marker:", driverId);
       } else {
-        // Create new marker
         markersRef.current[driverId] = L.marker([latitude, longitude], {
           icon: carIcon,
         }).addTo(mapInstance.current).bindPopup(`
@@ -337,13 +323,11 @@ const MapSec = () => {
           ID: ${driverId}
           </div>
           `);
-          // <b>${name}</b><br>
 
         console.log("✅ Added new driver marker:", driverId);
       }
     };
 
-    // Receive ride requests updates
     const handleRideRequest = (data) => {
       const { point } = data;
       setRideRequests((prev) => ({
@@ -351,7 +335,6 @@ const MapSec = () => {
         [point]: (prev[point] || 0) + 1,
       }));
 
-      // Update tooltip
       if (pointMarkersRef.current[point]) {
         const requestsCount = (rideRequests[point] || 0) + 1;
         let color = "#000";
@@ -367,7 +350,6 @@ const MapSec = () => {
       }
     };
 
-    // NEW: Request successful
     const handleRequestSuccess = (data) => {
       setHasActiveRequest(true);
       setCurrentRequestPoint(data.point);
@@ -375,20 +357,17 @@ const MapSec = () => {
       alert(`✅ Ride requested at ${data.point}! Waiting for driver...`);
     };
 
-    // NEW: Request failed (already has active request)
     const handleRequestError = (data) => {
       setRequestError(data.message);
       alert(`❌ ${data.message}`);
     };
 
-    // Ride accepted notification - UPDATED
     const handleRideAccepted = (data) => {
       setHasActiveRequest(false);
       setCurrentRequestPoint(null);
       setRequestError("");
       alert(`🚗 ${data.driverName} accepted your ride at ${data.point}`);
 
-      // Reset requests for that point
       setRideRequests((prev) => ({
         ...prev,
         [data.point]: 0,
@@ -404,7 +383,6 @@ const MapSec = () => {
       }
     };
 
-    // NEW: Request cancelled
     const handleRequestCancelled = () => {
       setHasActiveRequest(false);
       setCurrentRequestPoint(null);
@@ -412,7 +390,6 @@ const MapSec = () => {
       alert("❌ Ride request cancelled");
     };
 
-    // User disconnected
     const handleUserDisconnected = (userId) => {
       if (markersRef.current[userId] && mapInstance.current) {
         mapInstance.current.removeLayer(markersRef.current[userId]);
@@ -421,18 +398,14 @@ const MapSec = () => {
       }
     };
 
-    // Register event listeners
     socket.on("driver-location", handleDriverLocation);
     socket.on("new-ride-request", handleRideRequest);
     socket.on("ride-accepted", handleRideAccepted);
     socket.on("user-disconnected", handleUserDisconnected);
-
-    // NEW: Register the new event listeners
     socket.on("request-success", handleRequestSuccess);
     socket.on("request-error", handleRequestError);
     socket.on("request-cancelled", handleRequestCancelled);
 
-    // Request existing driver locations
     socket.emit("get-driver-locations");
 
     return () => {
@@ -440,15 +413,12 @@ const MapSec = () => {
       socket.off("new-ride-request", handleRideRequest);
       socket.off("ride-accepted", handleRideAccepted);
       socket.on("user-disconnected", handleUserDisconnected);
-
-      // NEW: Clean up the new event listeners
       socket.off("request-success", handleRequestSuccess);
       socket.off("request-error", handleRequestError);
       socket.off("request-cancelled", handleRequestCancelled);
     };
   }, [rideRequests]);
 
-  // Add this useEffect to track socket connections
   useEffect(() => {
     const handleConnect = () => {
       console.log("🔗 Socket connected:", socket.id);
@@ -468,10 +438,10 @@ const MapSec = () => {
   }, []);
 
   return (
-    <div className="mt-5 grid md:grid-cols-[2fr_0.5fr_0.5fr] grid-cols-1 justify-center rounded-2xl items-center gap-4">
-      {/* NEW: Error Display - Full width at top */}
+    <div className="mt-5 flex flex-col rounded-2xl items-center gap-4">
+      {/* Error Display */}
       {requestError && (
-        <div className="col-span-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 mx-4">
+        <div className="w-full max-w-7xl bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           <div className="flex items-center">
             <span className="mr-2">❌</span>
             {requestError}
@@ -479,9 +449,9 @@ const MapSec = () => {
         </div>
       )}
 
-      {/* NEW: Active Request Banner - Full width at top */}
+      {/* Active Request Banner */}
       {hasActiveRequest && (
-        <div className="col-span-full bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4 mx-4">
+        <div className="w-full max-w-7xl bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <span className="mr-2">🚗</span>
@@ -499,82 +469,109 @@ const MapSec = () => {
         </div>
       )}
 
-      {/* Stopage points - Left Side */}
-      <div className="m-2 grid grid-cols-2 md:grid-cols-1 gap-4 space-y-2 justify-center items-center order-1 md:order-2">
-        {data2.map((item, index) => (
+      {/* Main Content - Map and Dropdown Side by Side */}
+      <div className="w-full max-w-7xl grid md:grid-cols-[80%_20%] grid-cols-1 gap-6">
+        
+        {/* Map Section - 80% on desktop, full width on mobile */}
+        <div className="flex flex-col justify-center items-center gap-4 bg-amber-100 rounded-2xl p-6 shadow-2xl">
+          <h1 className="text-4xl font-bold font-serif text-center pt-4">
+            Student Portal
+          </h1>
+          
           <div
-            key={index}
-            className="bg-[#00b4d8] p-6 rounded-2xl shadow-blue-400 shadow-2xl flex flex-col justify-center items-center sm:space-y-6 space-y-5"
-          >
-            <h2 className="text-xl font-bold mb-2">{item.title}</h2>
-            <p className="text-sm">{item.description}</p>
-            <Button
-              messeage={
-                hasActiveRequest && currentRequestPoint === item.point
-                  ? "Requested ✅"
-                  : hasActiveRequest
-                  ? "Already Requested"
-                  : item.buttonText
-              }
-              onClick={() => requestRide(item.point)}
-              disabled={hasActiveRequest}
-            />
+            ref={mapRef}
+            className="w-full h-96 rounded-2xl border-2 border-gray-300"
+            style={{ minHeight: "600px" }}
+          />
+          <p className="text-sm text-gray-600">
+            🚗 See driver locations in real-time | 📍 Select destination from dropdown to request rides
+          </p>
+
+          {/* Debug Info - Only show on mobile */}
+          <div className="text-sm bg-white p-3 rounded-lg border w-full max-w-md md:hidden">
+            <p>
+              <strong>Status:</strong>
+            </p>
+            <p>Student ID: {savedID}</p>
+            <p>Role: {userRole}</p>
+            <p>
+              Active Request:{" "}
+              {hasActiveRequest ? `Yes (${currentRequestPoint})` : "No"}
+            </p>
+            <p>Socket: {socket.connected ? "✅ Connected" : "❌ Disconnected"}</p>
           </div>
-        ))}
-      </div>
-
-      {/* Interactive Map Section */}
-      <div className="flex flex-col justify-center items-center gap-4 m-2 bg-amber-100 h-full rounded-2xl p-6 shadow-2xl order-2 md:order-1">
-        <h1 className="text-4xl font-bold font-serif text-center pt-4">
-          Student Portal
-        </h1>
-        <div
-          ref={mapRef}
-          className="w-full h-96 rounded-2xl border-2 border-gray-300"
-          style={{ minHeight: "600px" }}
-        />
-        <p className="text-sm text-gray-600">
-          🚗 See driver locations in real-time | 📍 Click points to request
-          rides
-        </p>
-
-        {/* NEW: Debug Info */}
-        <div className="text-sm bg-white p-3 rounded-lg border w-full">
-          <p>
-            <strong>Status:</strong>
-          </p>
-          <p>Student ID: {savedID}</p>
-          <p>Role: {userRole}</p>
-          <p>
-            Active Request:{" "}
-            {hasActiveRequest ? `Yes (${currentRequestPoint})` : "No"}
-          </p>
-          <p>Socket: {socket.connected ? "✅ Connected" : "❌ Disconnected"}</p>
         </div>
-      </div>
 
-      {/* Stopage points - Right Side */}
-      <div className="m-2 grid grid-cols-2 md:grid-cols-1 gap-4 space-y-2 justify-center items-center order-3">
-        {data1.map((item, index) => (
-          <div
-            key={index}
-            className="bg-[#00b4d8] p-6 rounded-2xl shadow-blue-400 shadow-2xl flex flex-col justify-center items-center sm:space-y-6 space-y-5"
-          >
-            <h2 className="text-xl font-bold mb-2">{item.title}</h2>
-            <p className="text-sm">{item.description}</p>
-            <Button
-              messeage={
-                hasActiveRequest && currentRequestPoint === item.point
-                  ? "Requested ✅"
-                  : hasActiveRequest
-                  ? "Already Requested"
-                  : item.buttonText
-              }
-              onClick={() => requestRide(item.point)}
-              disabled={hasActiveRequest}
-            />
+        {/* Dropdown Section - 20% on desktop, below map on mobile */}
+        <div className="flex flex-col gap-4">
+          {/* Dropdown for Ride Booking */}
+          <div className="relative bg-white rounded-2xl p-6 shadow-2xl">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="w-full bg-blue-600 text-white px-6 py-4 rounded-2xl shadow-lg font-bold text-lg hover:bg-blue-700 transition-colors flex justify-between items-center"
+            >
+              <span>🚗 Book a Ride</span>
+              <span className={`transform transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}>
+                ▼
+              </span>
+            </button>
+            
+            {isDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
+                <div className="p-4">
+                  <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">
+                    Select Your Destination
+                  </h3>
+                  <div className="space-y-2">
+                    {allPoints.map((item, index) => (
+                      <button
+                        key={index}
+                        onClick={() => requestRide(item.point)}
+                        disabled={hasActiveRequest}
+                        className={`w-full text-left p-4 rounded-xl transition-all ${
+                          hasActiveRequest && currentRequestPoint === item.point
+                            ? 'bg-green-100 border-2 border-green-500 text-green-700'
+                            : hasActiveRequest
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 border-2 border-transparent hover:border-blue-300'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-sm">{item.title}</span>
+                          <span className={`text-xs font-medium ${
+                            hasActiveRequest && currentRequestPoint === item.point
+                              ? 'text-green-600'
+                              : hasActiveRequest
+                              ? 'text-gray-400'
+                              : 'text-blue-600'
+                          }`}>
+                            {hasActiveRequest && currentRequestPoint === item.point
+                              ? 'Requested ✅'
+                              : hasActiveRequest
+                              ? 'Already Requested'
+                              : 'Book Now →'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Requests: {rideRequests[item.point] || 0}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        ))}
+
+          {/* Debug Info - Only show on desktop */}
+          <div className="hidden md:block text-sm bg-white p-4 rounded-2xl border shadow-lg">
+            <p className="font-bold mb-2">Status:</p>
+            <p><strong>ID:</strong> {savedID}</p>
+            <p><strong>Role:</strong> {userRole}</p>
+            <p><strong>Active Request:</strong> {hasActiveRequest ? `Yes (${currentRequestPoint})` : "No"}</p>
+            <p><strong>Socket:</strong> {socket.connected ? "✅ Connected" : "❌ Disconnected"}</p>
+          </div>
+        </div>
       </div>
     </div>
   );

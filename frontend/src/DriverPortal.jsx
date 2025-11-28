@@ -21,46 +21,51 @@ const DriverPortal = () => {
   const [savedID, setSavedID] = useState("");
   const [rideRequests, setRideRequests] = useState({});
   const [driverLocation, setDriverLocation] = useState(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const data1 = [
-    {
-      title: "Central Auditorium",
-      point: "Central Auditorium", 
-    },
-    {
-      title: "Shah Paran Hall",
-      point: "Shah Paran Hall", 
-    },
-    {
-      title: "Mujtoba Ali Hall",
-      point: "Mujtoba Ali Hall", 
-    },
-    {
-      title: "Ladies Hall",
-      point: "Ladies Hall", 
-    },
-  ];
-
-  const data2 = [
+  const allPoints = [
     {
       title: "SUST Gate",
-      point: "Sust Gate", 
+      point: "Sust Gate",
+      category: "gate"
     },
     {
       title: "IICT",
-      point: "IICT", 
+      point: "IICT",
+      category: "academic"
     },
     {
       title: "Chetona 71",
-      point: "Chetona 71", 
+      point: "Chetona 71",
+      category: "landmark"
     },
     {
       title: "E-Building",
-      point: "E Building", 
+      point: "E Building",
+      category: "academic"
+    },
+    {
+      title: "Central Auditorium",
+      point: "Central Auditorium",
+      category: "auditorium"
+    },
+    {
+      title: "Shah Paran Hall",
+      point: "Shah Paran Hall",
+      category: "hall"
+    },
+    {
+      title: "Mujtoba Ali Hall",
+      point: "Mujtoba Ali Hall",
+      category: "hall"
+    },
+    {
+      title: "Ladies Hall",
+      point: "Ladies Hall",
+      category: "hall"
     },
   ];
 
-  // Initialize user from localStorage
   // Initialize user and location tracking
   useEffect(() => {
     const savedID = localStorage.getItem("user_id") || "driver_" + Date.now();
@@ -113,33 +118,19 @@ const DriverPortal = () => {
       const L = await import("leaflet");
       await import("leaflet/dist/leaflet.css");
 
-      // Define boundary points
-      // const topLeft = [24.912361403380515, 91.83300018310548];
-      // const topLeft = [24.932424169029986, 91.80828094482423];
-      // const bottomRight = [24.90909189467807, 91.85707569122316];
       const topLeft = [24.948398100077377, 91.79677963256837];
       const bottomRight = [24.896402266558727, 91.86355590820314];
       const center = [24.921079669610492, 91.83162689208986];
 
-      // Create bounds and initialize map
       const bounds = L.latLngBounds([topLeft, bottomRight]);
       mapInstance.current = L.map(mapRef.current).setView(center, 16);
-
-      // Add tile layer
-      // L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      //   attribution: "OpenStreetMap",
-      // }).addTo(mapInstance.current);
 
       L.tileLayer("https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png", {
         attribution: "© Wikimedia",
       }).addTo(mapInstance.current);
 
-      // Apply bounds restrictions
       mapInstance.current.fitBounds(bounds);
-      // mapInstance.current.setMaxBounds(bounds);
-      // mapInstance.current.setMinZoom(15);
 
-      // Fixed points
       const fixedPoints = [
         {
           name: "Sust Gate",
@@ -183,12 +174,10 @@ const DriverPortal = () => {
         },
       ];
 
-      // Initialize ride requests and point markers
       const initialRequests = {};
       fixedPoints.forEach((pt) => {
         initialRequests[pt.name] = 0;
 
-        // Create custom icon for points
         const customIcon = L.divIcon({
           html: `
             <div style="
@@ -269,7 +258,6 @@ const DriverPortal = () => {
 
     const L = window.L;
 
-    // Create car icon for current driver (blue)
     const currentDriverIcon = L.divIcon({
       html: `
       <div style="
@@ -293,12 +281,10 @@ const DriverPortal = () => {
       popupAnchor: [0, -22],
     });
 
-    // Remove existing current driver marker if any
     if (markersRef.current.currentDriver) {
       mapInstance.current.removeLayer(markersRef.current.currentDriver);
     }
 
-    // Add current driver marker
     markersRef.current.currentDriver = L.marker(
       [driverLocation.latitude, driverLocation.longitude],
       {
@@ -315,9 +301,7 @@ const DriverPortal = () => {
       `
       )
       .openPopup();
-      // <b>${userName}</b><br>
 
-    // Center map on current driver
     mapInstance.current.setView(
       [driverLocation.latitude, driverLocation.longitude],
       16
@@ -326,11 +310,9 @@ const DriverPortal = () => {
 
   // Socket Event Handlers
   useEffect(() => {
-    // Receive OTHER drivers' locations
     const handleDriverLocation = (data) => {
       const { driverId, latitude, longitude, name } = data;
 
-      // Don't show current driver's own marker
       if (driverId === savedID) return;
 
       console.log("📍 Received OTHER driver location:", { driverId, name });
@@ -338,7 +320,6 @@ const DriverPortal = () => {
       if (!window.L || !mapInstance.current) return;
       const L = window.L;
 
-      // Create car icon for other drivers (different color)
       const otherDriverIcon = L.divIcon({
         html: `
         <div style="
@@ -363,11 +344,9 @@ const DriverPortal = () => {
       });
 
       if (markersRef.current[driverId]) {
-        // Update existing marker
         markersRef.current[driverId].setLatLng([latitude, longitude]);
         console.log("🔄 Updated other driver marker:", driverId);
       } else {
-        // Create new marker for other driver
         markersRef.current[driverId] = L.marker([latitude, longitude], {
           icon: otherDriverIcon,
         }).addTo(mapInstance.current).bindPopup(`
@@ -376,13 +355,11 @@ const DriverPortal = () => {
           ID: ${driverId}
           </div>
           `);
-          // <b>${name}</b><br>
 
         console.log("✅ Added other driver marker:", driverId);
       }
     };
 
-    // Receive ride requests
     const handleRideRequest = (data) => {
       const { point } = data;
       setRideRequests((prev) => ({
@@ -390,7 +367,6 @@ const DriverPortal = () => {
         [point]: (prev[point] || 0) + 1,
       }));
 
-      // Update tooltip with color coding
       if (pointMarkersRef.current[point]) {
         const requestsCount = (rideRequests[point] || 0) + 1;
         let color = "#000";
@@ -406,7 +382,6 @@ const DriverPortal = () => {
       }
     };
 
-    // Clear ride requests
     const handleClearRequests = (point) => {
       setRideRequests((prev) => ({
         ...prev,
@@ -423,7 +398,6 @@ const DriverPortal = () => {
       }
     };
 
-    // User disconnected
     const handleUserDisconnected = (userId) => {
       if (markersRef.current[userId] && mapInstance.current) {
         mapInstance.current.removeLayer(markersRef.current[userId]);
@@ -432,13 +406,11 @@ const DriverPortal = () => {
       }
     };
 
-    // Register event listeners
     socket.on("driver-location", handleDriverLocation);
     socket.on("new-ride-request", handleRideRequest);
     socket.on("clear-ride-requests", handleClearRequests);
     socket.on("user-disconnected", handleUserDisconnected);
 
-    // Request existing driver locations when component mounts
     socket.emit("get-driver-locations");
 
     return () => {
@@ -457,71 +429,102 @@ const DriverPortal = () => {
     });
     console.log(`Accepted requests at ${pointName}`);
     alert(`✅ You set ${pointName} as your next stopage!`);
+    
+    // Close dropdown after selection
+    setIsDropdownOpen(false);
   };
 
   return (
-    <div className="mt-5 grid md:grid-cols-[2fr_.5fr_.5fr] grid-cols-1 justify-center rounded-2xl items-center gap-4">
-      {/* Stopage points - Left Side */}
-      <div className="m-2 grid grid-cols-2 md:grid-cols-1 gap-4 space-y-2 justify-center items-center order-1 md: order-2">
-        {data2.map((item, index) => (
+    <div className="mt-5 flex flex-col rounded-2xl items-center gap-4">
+      {/* Main Content - Map and Dropdown Side by Side */}
+      <div className="w-full max-w-7xl grid md:grid-cols-[80%_20%] grid-cols-1 gap-6">
+        
+        {/* Map Section - 80% on desktop, full width on mobile */}
+        <div className="flex flex-col justify-center items-center gap-4 bg-amber-100 rounded-2xl p-6 shadow-2xl">
+          <h1 className="text-4xl font-bold font-serif text-center pt-4">
+            Driver Portal
+          </h1>
+          
           <div
-            key={index}
-            className="bg-[#00b4d8] p-6 rounded-2xl shadow-blue-400 shadow-2xl flex flex-col justify-center items-center sm:space-y-6 space-y-5"
-          >
-            <h2 className="text-xl font-bold mb-2">{item.title}</h2>
-            <p className="text-sm">
-              Requests: <b>{rideRequests[item.point] || 0}</b>
-            </p>
-            <Button
-              messeage="Set as next stopage"
-              onClick={() => acceptRide(item.point)}
-            />
-          </div>
-        ))}
-      </div>
+            ref={mapRef}
+            className="w-full h-96 rounded-2xl border-2 border-gray-300"
+            style={{ minHeight: "700px" }}
+          />
+          <p className="text-sm text-gray-600">
+            📍 Red/Orange points = Ride requests | ✅ Select destination to accept rides
+          </p>
 
-      {/* Interactive Map Section */}
-      <div className="flex flex-col justify-center items-center gap-4 m-2 bg-amber-100 h-full rounded-2xl p-6 shadow-2xl order-2 md:order-1">
-        <h1 className="text-4xl font-bold font-serif text-center pt-4">
-          Driver Portal
-        </h1>
-        <div
-          ref={mapRef}
-          className="w-full h-96 rounded-2xl border-2 border-gray-300"
-          style={{ minHeight: "700px" }}
-        />
-        <p className="text-sm text-gray-600">
-          📍 Red/Orange points = Ride requests | ✅ Click accept to take rides
-        </p>
-        <div className="text-sm">
-          <p>Driver ID: {savedID}</p>
-          <p>Role: {userRole}</p>
-          {driverLocation && (
-            <p>
-              Location: {driverLocation.latitude.toFixed(6)},{" "}
-              {driverLocation.longitude.toFixed(6)}
-            </p>
-          )}
+          {/* Debug Info - Only show on mobile */}
+          <div className="text-sm bg-white p-3 rounded-lg border w-full max-w-md md:hidden">
+            <p><strong>Driver Status:</strong></p>
+            <p>Driver ID: {savedID}</p>
+            <p>Role: {userRole}</p>
+            {driverLocation && (
+              <p>
+                Location: {driverLocation.latitude.toFixed(6)},{" "}
+                {driverLocation.longitude.toFixed(6)}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Stopage points - Right Side */}
-      <div className=" m-2 grid grid-cols-2 md:grid-cols-1 gap-4 space-y-2 justify-center items-center order-3 ">
-        {data1.map((item, index) => (
-          <div
-            key={index}
-            className="bg-[#00b4d8] p-6 rounded-2xl shadow-blue-400 shadow-2xl flex flex-col justify-center items-center sm:space-y-6 space-y-5"
-          >
-            <h2 className="text-xl font-bold mb-2">{item.title}</h2>
-            <p className="text-sm">
-              Requests: <b>{rideRequests[item.point] || 0}</b>
-            </p>
-            <Button
-              messeage="Set as next stopage"
-              onClick={() => acceptRide(item.point)}
-            />
+        {/* Dropdown Section - 20% on desktop, below map on mobile */}
+        <div className="flex flex-col gap-4">
+          {/* Dropdown for Accepting Rides */}
+          <div className="relative bg-white rounded-2xl p-6 shadow-2xl">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="w-full bg-green-600 text-white px-6 py-4 rounded-2xl shadow-lg font-bold text-lg hover:bg-green-700 transition-colors flex justify-between items-center"
+            >
+              <span>🚗 Accept Rides</span>
+              <span className={`transform transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}>
+                ▼
+              </span>
+            </button>
+            
+            {isDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
+                <div className="p-4">
+                  <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">
+                    Set Next Stopage
+                  </h3>
+                  <div className="space-y-2">
+                    {allPoints.map((item, index) => (
+                      <button
+                        key={index}
+                        onClick={() => acceptRide(item.point)}
+                        className="w-full text-left p-4 rounded-xl transition-all bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800 border-2 border-transparent hover:border-green-300"
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-sm">{item.title}</span>
+                          <span className="text-xs font-medium text-green-600">
+                            Accept →
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Requests: <b>{rideRequests[item.point] || 0}</b>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        ))}
+
+          {/* Debug Info - Only show on desktop */}
+          <div className="hidden md:block text-sm bg-white p-4 rounded-2xl border shadow-lg">
+            <p className="font-bold mb-2">Driver Status:</p>
+            <p><strong>ID:</strong> {savedID}</p>
+            <p><strong>Role:</strong> {userRole}</p>
+            {driverLocation && (
+              <p>
+                <strong>Location:</strong> {driverLocation.latitude.toFixed(6)},{" "}
+                {driverLocation.longitude.toFixed(6)}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

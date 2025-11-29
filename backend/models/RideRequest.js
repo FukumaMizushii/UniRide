@@ -27,9 +27,19 @@ const rideRequestSchema = new mongoose.Schema({
   completedAt: {
     type: Date,
     default: null
+  },
+  // Track seating order for capacity management
+  requestOrder: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true
 });
+
+// Add index for better query performance
+rideRequestSchema.index({ student: 1, status: 1 });
+rideRequestSchema.index({ point: 1, status: 1 });
+rideRequestSchema.index({ driver: 1, status: 1 });
 
 module.exports = mongoose.model('RideRequest', rideRequestSchema);

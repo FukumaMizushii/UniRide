@@ -15,7 +15,7 @@ const DriverLg = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError(""); // Clear error when user types
+    setError("");
   };
 
   const handleSubmit = async (e) => {
@@ -45,20 +45,21 @@ const DriverLg = () => {
       const data = await response.json();
 
       if (data.success) {
-        // Store user info
+        // Store user info from database
         localStorage.setItem("user_id", data.user.id);
         localStorage.setItem("user_name", data.user.name);
         localStorage.setItem("user_role", data.user.role);
         localStorage.setItem("auto_id", data.user.autoId);
 
-        // Register with socket
+        // Register with socket using database ID
         socket.emit("register-user", {
           id: data.user.id,
           name: data.user.name,
           role: data.user.role,
         });
 
-        console.log("✅ Driver logged in:", data.user.name);
+        console.log("✅ Driver logged in from database:", data.user.name);
+        window.dispatchEvent(new Event('userLogin'));
         navigate("/driverPortal");
       } else {
         setError(data.message || "Login failed!");
@@ -79,7 +80,6 @@ const DriverLg = () => {
         <h2 className="text-4xl font-bold mb-4 text-[#2b2d42] pt-5">Driver Login</h2>
       </div>
 
-      {/* Error Message */}
       {error && (
         <div className="w-full max-w-md bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           <div className="flex items-center">
@@ -117,6 +117,18 @@ const DriverLg = () => {
           onClick={handleSubmit}
         />
       </form>
+
+      <div className="mt-6 text-center">
+        <p className="text-gray-700">
+          Don't have an account?{" "}
+          <a 
+            href="/driversu" 
+            className="text-blue-600 hover:text-blue-800 font-semibold underline"
+          >
+            Sign up as Driver
+          </a>
+        </p>
+      </div>
     </div>
   );
 };

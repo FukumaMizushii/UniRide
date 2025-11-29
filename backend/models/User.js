@@ -26,11 +26,13 @@ const userSchema = new mongoose.Schema({
   },
   studentId: {
     type: String,
-    sparse: true
+    sparse: true,
+    unique: true
   },
   autoId: {
     type: String,
-    sparse: true
+    sparse: true,
+    unique: true
   },
   isOnline: {
     type: Boolean,
@@ -44,6 +46,19 @@ const userSchema = new mongoose.Schema({
   lastSeen: {
     type: Date,
     default: Date.now
+  },
+  // Driver-specific fields
+  currentRides: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'RideRequest'
+  }],
+  capacity: {
+    type: Number,
+    default: 6
+  },
+  availableSeats: {
+    type: Number,
+    default: 6
   }
 }, {
   timestamps: true
@@ -51,12 +66,11 @@ const userSchema = new mongoose.Schema({
 
 // ✅ FIX: Add proper password hashing
 userSchema.pre('save', async function () {
-  if (!this.isModified('password')) return; // no next()
+  if (!this.isModified('password')) return;
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
-
 
 // ✅ FIX: Proper password comparison
 userSchema.methods.comparePassword = async function(candidatePassword) {
@@ -67,4 +81,30 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   }
 };
 
+// Method to check if driver has available seats
+userSchema.methods.hasAvailableSeats = function() {
+  return this.availableSeats > 0;
+};
+
+// Method to occupy a seat
+userSchema.methods.occupySeat = async function() {
+  if (this.availableSeats > 0) {
+    this.availableSeats -= 1;
+    await this.save();
+    return true;
+  }
+  return false;
+};
+
+// Method to free a seat
+userSchema.methods.freeSeat = async function() {
+  if (this.availableSeats < this.capacity) {
+    this.availableSeats += 1;
+    await this.save();
+    return true;
+  }
+  return false;
+};
+
 module.exports = mongoose.model('User', userSchema);
+

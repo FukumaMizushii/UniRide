@@ -41,18 +41,6 @@ mongoose
     process.exit(1);
   });
 
-// Remove the old server.listen() at the bottom of the file
-
-// // MongoDB Connection
-// const MONGODB_URI = process.env.MONGODB_URI.replace(
-//   "<db_password>",
-//   process.env.DB_PASSWORD
-// );
-
-// mongoose
-//   .connect(MONGODB_URI)
-//   .then(() => console.log("✅ MongoDB Connected Successfully"))
-//   .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
 // Import Models
 const User = require("./models/User");

@@ -553,15 +553,35 @@ const MapSec = () => {
   }, [rideRequests, user]);
 
   // Manual sync button
-  const handleManualSync = async () => {
-    if (user?.id) {
-      setIsLoading(true);
-      await fetchStudentStatus(user.id);
-      await fetchActiveRequests();
-      setIsLoading(false);
-      alert("✅ Student state synced with database!");
-    }
-  };
+  // const handleManualSync = async () => {
+  //   if (user?.id) {
+  //     setIsLoading(true);
+  //     await fetchStudentStatus(user.id);
+  //     await fetchActiveRequests();
+  //     setIsLoading(false);
+  //     alert("✅ Student state synced with database!");
+  //   }
+  // };
+
+  useEffect(() => {
+    const handleManualSyncRequest = async (event) => {
+      const { userId, role } = event.detail;
+
+      if (user && user.id === userId && role === "student") {
+        console.log("🔄 Manual sync triggered from navbar");
+        setIsLoading(true);
+        await fetchStudentStatus(user.id);
+        await fetchActiveRequests();
+        setIsLoading(false);
+      }
+    };
+
+    window.addEventListener("manualSyncRequest", handleManualSyncRequest);
+
+    return () => {
+      window.removeEventListener("manualSyncRequest", handleManualSyncRequest);
+    };
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -582,14 +602,14 @@ const MapSec = () => {
   return (
     <div className="mt-5 flex flex-col rounded-2xl items-center gap-4">
       {/* Sync Button */}
-      <div className="w-full max-w-7xl flex justify-end">
+      {/* <div className="w-full max-w-7xl flex justify-end">
         <button
           onClick={handleManualSync}
           className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors"
         >
           🔄 Sync with Database
         </button>
-      </div>
+      </div> */}
 
       {/* Error Display */}
       {requestError && (
@@ -760,9 +780,9 @@ const MapSec = () => {
                 ? `Waiting at ${currentRequestPoint}`
                 : "Available for booking"}
             </p>
-            <p>
+            {/* <p>
               <strong>Last Sync:</strong> {new Date().toLocaleTimeString()}
-            </p>
+            </p> */}
           </div>
         </div>
       </div>

@@ -2,14 +2,17 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import sustLogo from "./assets/sust.png";
 import { GiHamburgerMenu } from "react-icons/gi";
 import { useState, useRef, useEffect } from "react";
+import socket from "./socket";
 
 const NavBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [optionMenu, setOptionMenu] = useState(false);
+  const [helpDropdownOpen, setHelpDropdownOpen] = useState(false);
   const [user, setUser] = useState(null);
   const hambarger = useRef(null);
   const btn = useRef(null);
+  const helpRef = useRef(null);
 
   // Enhanced authentication check with location dependency
   useEffect(() => {
@@ -53,10 +56,42 @@ const NavBar = () => {
       window.removeEventListener('userLogin', handleLoginEvent);
       window.removeEventListener('userLogout', handleStorageChange);
     };
-  }, [location]); // Add location to dependency array
+  }, [location]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      // Close hamburger menu
+      if (
+        btn.current &&
+        !btn.current.contains(e.target) &&
+        hambarger.current &&
+        !hambarger.current.contains(e.target)
+      ) {
+        setOptionMenu(false);
+      }
+
+      // Close help dropdown
+      if (
+        helpRef.current &&
+        !helpRef.current.contains(e.target)
+      ) {
+        setHelpDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const optionChange = () => {
     setOptionMenu(!optionMenu);
+  };
+
+  const toggleHelpDropdown = () => {
+    setHelpDropdownOpen(!helpDropdownOpen);
   };
 
   const handleLogout = () => {
@@ -71,6 +106,7 @@ const NavBar = () => {
     
     setUser(null);
     setOptionMenu(false);
+    setHelpDropdownOpen(false);
     
     // Dispatch logout event
     window.dispatchEvent(new Event('userLogout'));
@@ -82,25 +118,65 @@ const NavBar = () => {
     alert("Successfully logged out!");
   };
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (
-        btn.current &&
-        !btn.current.contains(e.target) &&
-        hambarger.current &&
-        !hambarger.current.contains(e.target)
-      ) {
-        setOptionMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
+  // Sync with database function
+  const handleSyncWithDatabase = async () => {
+    if (!user) {
+      alert("Please login first!");
+      return;
+    }
 
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+    try {
+      console.log("🔄 Manual sync requested by user:", user.name);
+      
+      // Dispatch a custom event that components can listen to
+      window.dispatchEvent(new CustomEvent('manualSyncRequest', { 
+        detail: { userId: user.id, role: user.role } 
+      }));
+      
+      setHelpDropdownOpen(false);
+      alert("🔄 Sync request sent! Your data will be updated shortly.");
+    } catch (error) {
+      console.error("❌ Error triggering sync:", error);
+      alert("❌ Failed to sync with database. Please try again.");
+    }
+  };
 
-  // Remove duplicate login buttons from desktop section
+  // Debug function to check current state
+  const handleDebugInfo = () => {
+    if (!user) {
+      alert("Please login first!");
+      return;
+    }
+
+    const debugInfo = {
+      user: user,
+      localStorage: {
+        userId: localStorage.getItem("user_id"),
+        userName: localStorage.getItem("user_name"),
+        userRole: localStorage.getItem("user_role")
+      },
+      socket: {
+        connected: socket.connected,
+        id: socket.id
+      },
+      currentTime: new Date().toLocaleString()
+    };
+
+    console.log("🐛 Debug Info:", debugInfo);
+    alert(`🔍 Debug Info:\n\nUser: ${user.name} (${user.role})\nSocket: ${socket.connected ? 'Connected' : 'Disconnected'}\nTime: ${debugInfo.currentTime}`);
+    setHelpDropdownOpen(false);
+  };
+
+  // Clear local data (for testing)
+  const handleClearLocalData = () => {
+    if (confirm("⚠️ This will clear all local data. Continue?")) {
+      localStorage.clear();
+      window.dispatchEvent(new Event('userLogout'));
+      alert("🧹 Local data cleared! Please refresh the page.");
+      setHelpDropdownOpen(false);
+    }
+  };
+
   return (
     <nav className="h-16 bg-[#023e8a] flex justify-between items-center m-0.5 mr-0 rounded-2xl pr-3 relative">
       {/* Logo Section */}
@@ -146,12 +222,66 @@ const NavBar = () => {
           </Link>
         )}
         
-        <Link
-          to="/help"
-          className="font-bold text-[#f2e8cf] text-xl transition-transform duration-300 hover:-translate-y-2 hover:shadow-lg hover:rounded-2xl hover:p-2 hover:bg-red-400"
-        >
-          Help
-        </Link>
+        {/* Help Dropdown */}
+        <div className="relative" ref={helpRef}>
+          <button
+            onClick={toggleHelpDropdown}
+            className="font-bold text-[#f2e8cf] text-xl transition-transform duration-300 hover:-translate-y-2 hover:shadow-lg hover:rounded-2xl hover:p-2 hover:bg-red-400"
+          >
+            Help & Tools
+          </button>
+          
+          {helpDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+              <div className="p-2">
+                {/* Sync Option */}
+                <button
+                  onClick={handleSyncWithDatabase}
+                  className="w-full text-left px-4 py-3 text-green-700 font-semibold hover:bg-green-50 rounded-xl transition-colors flex items-center"
+                >
+                  <span className="mr-2">🔄</span>
+                  Sync with Database
+                </button>
+                
+                {/* Debug Info */}
+                <button
+                  onClick={handleDebugInfo}
+                  className="w-full text-left px-4 py-3 text-blue-700 font-semibold hover:bg-blue-50 rounded-xl transition-colors flex items-center"
+                >
+                  <span className="mr-2">🐛</span>
+                  Debug Information
+                </button>
+                
+                {/* Clear Data (for testing) */}
+                <button
+                  onClick={handleClearLocalData}
+                  className="w-full text-left px-4 py-3 text-red-700 font-semibold hover:bg-red-50 rounded-xl transition-colors flex items-center"
+                >
+                  <span className="mr-2">🧹</span>
+                  Clear Local Data
+                </button>
+                
+                {/* Divider */}
+                <div className="border-t border-gray-200 my-1"></div>
+                
+                {/* Regular Help Links */}
+                <Link
+                  to="/help"
+                  onClick={() => setHelpDropdownOpen(false)}
+                  className="block px-4 py-3 text-gray-700 font-semibold hover:bg-gray-50 rounded-xl transition-colors"
+                >
+                  📖 User Guide
+                </Link>
+                <a
+                  href="mailto:support@uniride.com"
+                  className="block px-4 py-3 text-gray-700 font-semibold hover:bg-gray-50 rounded-xl transition-colors"
+                >
+                  📧 Contact Support
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* User Profile / Login - SINGLE SET OF BUTTONS */}
         {user ? (
@@ -240,13 +370,42 @@ const NavBar = () => {
           </Link>
         )}
         
-        <Link
-          to="/help"
-          onClick={() => setOptionMenu(false)}
-          className="text-[#f2e8cf] transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg hover:rounded-2xl hover:p-2 hover:bg-red-400"
-        >
-          Help
-        </Link>
+        {/* Mobile Help Section */}
+        <div className="border-t border-blue-300 pt-2">
+          <div className="text-[#f2e8cf] font-bold mb-2">Help & Tools:</div>
+          
+          {user && (
+            <>
+              <button
+                onClick={() => {
+                  handleSyncWithDatabase();
+                  setOptionMenu(false);
+                }}
+                className="w-full text-left text-[#f2e8cf] transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg hover:rounded-2xl hover:p-2 hover:bg-green-500"
+              >
+                🔄 Sync with Database
+              </button>
+              
+              <button
+                onClick={() => {
+                  handleDebugInfo();
+                  setOptionMenu(false);
+                }}
+                className="w-full text-left text-[#f2e8cf] transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg hover:rounded-2xl hover:p-2 hover:bg-blue-500"
+              >
+                🐛 Debug Info
+              </button>
+            </>
+          )}
+          
+          <Link
+            to="/help"
+            onClick={() => setOptionMenu(false)}
+            className="block text-[#f2e8cf] transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg hover:rounded-2xl hover:p-2 hover:bg-red-400"
+          >
+            📖 User Guide
+          </Link>
+        </div>
 
         {/* Mobile Login/Logout - SINGLE SET */}
         {user ? (

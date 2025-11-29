@@ -286,6 +286,125 @@ app.delete("/api/debug/clear-users", async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
+// Add these before the socket.io logic
+
+// Get user's current ride status
+app.get("/api/user/ride-status/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Check for active ride requests
+    const activeRequest = await RideRequest.findOne({
+      student: userId,
+      status: { $in: ["pending", "accepted"] },
+    }).populate("driver", "name");
+
+    // Check for driver's current status
+    const driver = await User.findById(userId);
+    let driverStatus = null;
+    if (driver && driver.role === "driver") {
+      driverStatus = {
+        availableSeats: driver.availableSeats,
+        capacity: driver.capacity,
+        currentRides: driver.currentRides.length,
+      };
+    }
+
+    res.json({
+      success: true,
+      activeRequest: activeRequest
+        ? {
+            id: activeRequest._id,
+            point: activeRequest.point,
+            status: activeRequest.status,
+            driverName: activeRequest.driver?.name,
+            acceptedAt: activeRequest.acceptedAt,
+          }
+        : null,
+      driverStatus,
+    });
+  } catch (error) {
+    console.error("Error fetching ride status:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get driver's current state
+app.get("/api/driver/status/:driverId", async (req, res) => {
+  try {
+    const { driverId } = req.params;
+
+    const driver = await User.findById(driverId);
+    if (!driver || driver.role !== "driver") {
+      return res
+        .status(404)
+        .json({ success: false, message: "Driver not found" });
+    }
+
+    // Get current ride requests for this driver
+    const currentRides = await RideRequest.find({
+      driver: driverId,
+      status: "accepted",
+    }).populate("student", "name");
+
+    res.json({
+      success: true,
+      driver: {
+        id: driver._id,
+        name: driver.name,
+        availableSeats: driver.availableSeats,
+        capacity: driver.capacity,
+        currentRides: currentRides.map((ride) => ({
+          id: ride._id,
+          studentName: ride.student.name,
+          point: ride.point,
+          acceptedAt: ride.acceptedAt,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching driver status:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get all active ride requests for points
+app.get("/api/ride-requests/active", async (req, res) => {
+  try {
+    const activeRequests = await RideRequest.aggregate([
+      { $match: { status: "pending" } },
+      {
+        $group: {
+          _id: "$point",
+          count: { $sum: 1 },
+          requests: {
+            $push: {
+              studentId: "$student",
+              requestId: "$_id",
+              requestOrder: "$requestOrder",
+            },
+          },
+        },
+      },
+    ]);
+
+    const formattedRequests = {};
+    activeRequests.forEach((item) => {
+      formattedRequests[item._id] = item.count;
+    });
+
+    res.json({
+      success: true,
+      requests: formattedRequests,
+      detailed: activeRequests,
+    });
+  } catch (error) {
+    console.error("Error fetching active requests:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Serve static files
 app.use(express.static(path.join(__dirname, "../dist")));
 
@@ -329,9 +448,9 @@ io.on("connection", (socket) => {
         const availableSeats = driver?.availableSeats || 6;
         const capacity = driver?.capacity || 6;
 
-        console.log(
-          `🛰️ Location from ${name}: ${latitude}, ${longitude}, Seats: ${availableSeats}/${capacity}`
-        );
+        // console.log(
+        //   `🛰️ Location from ${name}: ${latitude}, ${longitude}, Seats: ${availableSeats}/${capacity}`
+        // );
 
         // Broadcast to all clients with current capacity info
         io.emit("driver-location", {
@@ -433,7 +552,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Cancel ride request - DELETE the document
+  // Update the cancel-ride-request handler
   socket.on("cancel-ride-request", async ({ studentId, point }) => {
     try {
       console.log(
@@ -448,16 +567,18 @@ io.on("connection", (socket) => {
       });
 
       if (rideRequest) {
-        // 🔥 DELETE the ride request document
+        // DELETE the ride request document
         await RideRequest.findByIdAndDelete(rideRequest._id);
 
-        // Update in-memory storage
+        // 🔥 FIX: Properly update in-memory storage
         const pointRequests = rideRequests[point] || [];
-        rideRequests[point] = pointRequests.filter((id) => id !== studentId);
+        const updatedRequests = pointRequests.filter((id) => id !== studentId);
+        rideRequests[point] = updatedRequests;
 
         console.log(
           `✅ Ride request cancelled and deleted for student ${studentId} at ${point}`
         );
+        console.log(`📊 Updated requests at ${point}:`, updatedRequests);
 
         // Notify student
         socket.emit("request-cancelled", {
@@ -465,17 +586,17 @@ io.on("connection", (socket) => {
           canBookAgain: true,
         });
 
-        // Notify all about the update
+        // 🔥 FIX: Notify all about the update with proper count
         io.emit("ride-request-cancelled", {
           studentId,
           point,
-          requestsCount: rideRequests[point].length,
+          requestsCount: updatedRequests.length,
         });
 
         // Update point marker tooltip
         io.emit("update-point-requests", {
           point,
-          requestsCount: rideRequests[point].length,
+          requestsCount: updatedRequests.length,
         });
       } else {
         console.log(`❌ No pending ride request found to cancel`);
@@ -492,76 +613,108 @@ io.on("connection", (socket) => {
     }
   });
 
-// Complete ride - DELETE the document and free seat
-socket.on("complete-ride", async ({ studentId, requestId }) => {
-  try {
-    console.log(`🔚 Completing ride for student ${studentId}, request ${requestId}`);
-    
-    const rideRequest = await RideRequest.findOne({
-      _id: requestId,
-      student: studentId,
-      status: "accepted"
-    }).populate('driver');
+  // Update the complete-ride handler to also update ride requests
+  socket.on("complete-ride", async ({ studentId, requestId }) => {
+    try {
+      console.log(
+        `🔚 Completing ride for student ${studentId}, request ${requestId}`
+      );
 
-    if (rideRequest && rideRequest.driver) {
-      // Get current driver data
-      const driver = await User.findById(rideRequest.driver._id);
-      
-      console.log(`📊 Driver ${driver.name} seats before completion: ${driver.availableSeats}`);
-      
-      // Free up a seat for the driver
-      const newAvailableSeats = driver.availableSeats + 1;
-      await User.findByIdAndUpdate(rideRequest.driver._id, {
-        availableSeats: newAvailableSeats
-      });
+      const rideRequest = await RideRequest.findOne({
+        _id: requestId,
+        student: studentId,
+        status: "accepted",
+      }).populate("driver");
 
-      console.log(`📊 Driver ${driver.name} seats after completion: ${newAvailableSeats}`);
-      console.log(`✅ Ride completed for student ${studentId}`);
-      
-      // DELETE the ride request document
-      await RideRequest.findByIdAndDelete(requestId);
+      if (rideRequest && rideRequest.driver) {
+        // Get current driver data
+        const driver = await User.findById(rideRequest.driver._id);
 
-      // Notify student
-      socket.emit("ride-completed", {
-        message: "Ride completed successfully!",
-        canBookAgain: true
-      });
+        console.log(
+          `📊 Driver ${driver.name} seats before completion: ${driver.availableSeats}`
+        );
 
-      // Notify driver about seat availability with fresh data
-      const driverSocket = activeSockets[rideRequest.driver._id];
-      if (driverSocket) {
-        const updatedDriver = await User.findById(rideRequest.driver._id);
-        io.to(driverSocket).emit("seat-freed", {
-          availableSeats: updatedDriver.availableSeats
+        // Free up a seat for the driver
+        const newAvailableSeats = driver.availableSeats + 1;
+        await User.findByIdAndUpdate(rideRequest.driver._id, {
+          availableSeats: newAvailableSeats,
         });
-        
-        // Also update driver location with new seat count
-        if (updatedDriver.lastLocation) {
-          io.to(driverSocket).emit("driver-location", {
-            driverId: updatedDriver._id,
-            name: updatedDriver.name,
-            latitude: updatedDriver.lastLocation.latitude,
-            longitude: updatedDriver.lastLocation.longitude,
+
+        console.log(
+          `📊 Driver ${driver.name} seats after completion: ${newAvailableSeats}`
+        );
+        console.log(`✅ Ride completed for student ${studentId}`);
+
+        // DELETE the ride request document
+        await RideRequest.findByIdAndDelete(requestId);
+
+        // Notify student
+        socket.emit("ride-completed", {
+          message: "Ride completed successfully!",
+          canBookAgain: true,
+        });
+
+        // Notify driver about seat availability with fresh data
+        const driverSocket = activeSockets[rideRequest.driver._id];
+        if (driverSocket) {
+          const updatedDriver = await User.findById(rideRequest.driver._id);
+          io.to(driverSocket).emit("seat-freed", {
             availableSeats: updatedDriver.availableSeats,
-            capacity: updatedDriver.capacity
           });
+
+          // Also update driver location with new seat count
+          if (updatedDriver.lastLocation) {
+            io.to(driverSocket).emit("driver-location", {
+              driverId: updatedDriver._id,
+              name: updatedDriver.name,
+              latitude: updatedDriver.lastLocation.latitude,
+              longitude: updatedDriver.lastLocation.longitude,
+              availableSeats: updatedDriver.availableSeats,
+              capacity: updatedDriver.capacity,
+            });
+          }
         }
+
+        console.log(`🗑️ Ride request ${requestId} deleted from database`);
+      } else {
+        console.log(`❌ Ride request not found or already completed`);
+        socket.emit("ride-completion-error", {
+          message: "Ride request not found",
+        });
       }
-      
-      console.log(`🗑️ Ride request ${requestId} deleted from database`);
-    } else {
-      console.log(`❌ Ride request not found or already completed`);
+    } catch (error) {
+      console.error("Error completing ride:", error);
       socket.emit("ride-completion-error", {
-        message: "Ride request not found"
+        message: "Failed to complete ride",
       });
     }
-  } catch (error) {
-    console.error("Error completing ride:", error);
-    socket.emit("ride-completion-error", {
-      message: "Failed to complete ride"
-    });
-  }
-});
+  });
+
+  // Add a new socket event to handle point request updates
+  socket.on("update-point-requests-manual", async ({ point }) => {
+    try {
+      // Get current count from database
+      const pendingCount = await RideRequest.countDocuments({
+        point: point,
+        status: "pending",
+      });
+
+      // Update in-memory storage
+      rideRequests[point] = Array(pendingCount)
+        .fill()
+        .map((_, i) => `temp_${i}`); // Temporary IDs for count
+
+      console.log(`🔄 Manually updated requests for ${point}: ${pendingCount}`);
+
+      // Notify all clients
+      io.emit("update-point-requests", {
+        point,
+        requestsCount: pendingCount,
+      });
+    } catch (error) {
+      console.error("Error updating point requests:", error);
+    }
+  });
 
   // Enhanced accept-ride handler with proper seat calculation
   socket.on("accept-ride", async ({ driverId, point }) => {

@@ -8,7 +8,7 @@ const DriverLg = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -44,6 +44,7 @@ const DriverLg = () => {
 
       const data = await response.json();
 
+      // In the handleSubmit function, after successful login:
       if (data.success) {
         // Store user info from database
         localStorage.setItem("user_id", data.user.id);
@@ -59,7 +60,10 @@ const DriverLg = () => {
         });
 
         console.log("✅ Driver logged in from database:", data.user.name);
-        window.dispatchEvent(new Event('userLogin'));
+
+        // 🔥 CRITICAL: Trigger navbar update and database sync
+        window.dispatchEvent(new Event("userLogin"));
+
         navigate("/driverPortal");
       } else {
         setError(data.message || "Login failed!");
@@ -77,7 +81,9 @@ const DriverLg = () => {
       <div className="flex flex-col justify-center items-center mb-4">
         <FaCarSide className="font-bold text-9xl text-[#ff006e]" />
         <section className="text-3xl font-bold text-[#ff006e]">UniRide</section>
-        <h2 className="text-4xl font-bold mb-4 text-[#2b2d42] pt-5">Driver Login</h2>
+        <h2 className="text-4xl font-bold mb-4 text-[#2b2d42] pt-5">
+          Driver Login
+        </h2>
       </div>
 
       {error && (
@@ -89,7 +95,10 @@ const DriverLg = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col justify-center items-center space-y-4 w-full max-w-md">
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col justify-center items-center space-y-4 w-full max-w-md"
+      >
         <input
           type="email"
           name="email"
@@ -97,7 +106,7 @@ const DriverLg = () => {
           value={formData.email}
           onChange={handleChange}
           className="w-full bg-white border-black px-4 py-3 border-2 border-dashed rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xl"
-          required 
+          required
           disabled={loading}
         />
         <input
@@ -110,9 +119,9 @@ const DriverLg = () => {
           required
           disabled={loading}
         />
-        
-        <Button 
-          messeage={loading ? "Logging in..." : "Log in"} 
+
+        <Button
+          messeage={loading ? "Logging in..." : "Log in"}
           disabled={loading}
           onClick={handleSubmit}
         />
@@ -121,8 +130,8 @@ const DriverLg = () => {
       <div className="mt-6 text-center">
         <p className="text-gray-700">
           Don't have an account?{" "}
-          <a 
-            href="/driversu" 
+          <a
+            href="/driversu"
             className="text-blue-600 hover:text-blue-800 font-semibold underline"
           >
             Sign up as Driver

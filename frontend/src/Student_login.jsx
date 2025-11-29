@@ -44,6 +44,7 @@ const StudentLg = () => {
 
       const data = await response.json();
 
+      // In the handleSubmit function, after successful login:
       if (data.success) {
         // Store user info from database
         localStorage.setItem("user_id", data.user.id);
@@ -59,7 +60,10 @@ const StudentLg = () => {
         });
 
         console.log("✅ Student logged in from database:", data.user.name);
+
+        // 🔥 CRITICAL: Trigger navbar update and database sync
         window.dispatchEvent(new Event("userLogin"));
+
         navigate("/points");
       } else {
         setError(data.message || "Login failed!");

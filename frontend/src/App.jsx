@@ -12,23 +12,28 @@ import Help from "./help";
 import SignupForm from "./signupForm";
 import Button from "./button";
 import SignupFormDriver from "./driverSignup";
-
-
+import ErrorBoundary from "./ErrorBoundary";
 
 function App() {
- 
   return (
-   <BrowserRouter>
+    <BrowserRouter>
       <NavBar />
       <Routes>  
-        <Route path="/points" element={ <MapSec />} />
-        <Route path="/student" element={ <StudentLg />} />
-        <Route path="/driver" element={ <DriverLg />} />
-        <Route path="/help" element={ <Help />} />   
-        <Route path="/driverPortal" element={ <DriverPortal />} />
-        <Route path="/studentsu" element={ <SignupForm />} />
-        <Route path="/driversu" element={ <SignupFormDriver />} />
-
+        <Route path="/points" element={
+          <ErrorBoundary>
+            <MapSec />
+          </ErrorBoundary>
+        } />
+        <Route path="/student" element={<StudentLg />} />
+        <Route path="/driver" element={<DriverLg />} />
+        <Route path="/help" element={<Help />} />   
+        <Route path="/driverPortal" element={
+          <ErrorBoundary>
+            <DriverPortal />
+          </ErrorBoundary>
+        } />
+        <Route path="/studentsu" element={<SignupForm />} />
+        <Route path="/driversu" element={<SignupFormDriver />} />
 
         <Route path="/" element={
           <>
@@ -36,12 +41,11 @@ function App() {
             <OrderSec />
             <SignUp />
             <Footer />
-            
           </>
         } />
       </Routes>
-   </BrowserRouter>
+    </BrowserRouter>
   )
 }
 
-export default App
+export default App;

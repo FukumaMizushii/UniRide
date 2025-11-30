@@ -1,4 +1,3 @@
-// require('dotenv').config();
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 const express = require("express");
@@ -16,16 +15,14 @@ const io = socketio(server, {
   },
 });
 
-
-
-// MongoDB Connection
-const MONGODB_URI = process.env.MONGODB_URI.replace(
-  "<db_password>",
-  process.env.DB_PASSWORD
-);
-
-
-
+// MongoDB Connection - FIX: Check if MONGODB_URI exists
+let MONGODB_URI = process.env.MONGODB_URI;
+if (MONGODB_URI && MONGODB_URI.includes("<db_password>")) {
+  MONGODB_URI = MONGODB_URI.replace(
+    "<db_password>",
+    process.env.DB_PASSWORD || ''
+  );
+}
 
 // Import Models
 const User = require("./models/User");
@@ -36,7 +33,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
-// Fixed points (now stored in database for future flexibility)
+// Fixed points
 const fixedPoints = [
   { name: "Sust Gate", coords: [24.911135347770895, 91.83223843574525] },
   { name: "IICT", coords: [24.91813148559637, 91.83094024658205] },
@@ -51,8 +48,8 @@ const fixedPoints = [
   { name: "Ladies Hall", coords: [24.92236400496206, 91.8292772769928] },
 ];
 
-// In-memory storage for real-time data (complementary to database)
-const activeSockets = {}; // userId → socketId
+// In-memory storage
+const activeSockets = {};
 const rideRequests = {};
 fixedPoints.forEach((pt) => (rideRequests[pt.name] = []));
 
@@ -62,7 +59,6 @@ app.get("/api/points", (req, res) => {
 });
 
 // User Registration
-// ✅ FIXED: User Registration - Allow multiple users properly
 app.post("/api/register", async (req, res) => {
   try {
     const { name, email, password, role, studentId, autoId } = req.body;
@@ -75,23 +71,16 @@ app.post("/api/register", async (req, res) => {
       autoId,
     });
 
-    // ✅ FIX: Build proper query based on role
     let query = { email };
-
     if (role === "student" && studentId) {
-      // For students, check if email OR studentId exists
       query = { $or: [{ email }, { studentId }] };
     } else if (role === "driver" && autoId) {
-      // For drivers, check if email OR autoId exists
       query = { $or: [{ email }, { autoId }] };
     }
 
-    // Check if user already exists
     const existingUser = await User.findOne(query);
-
     if (existingUser) {
       let message = "User already exists with this ";
-
       if (existingUser.email === email) {
         message += "email";
       } else if (role === "student" && existingUser.studentId === studentId) {
@@ -109,11 +98,10 @@ app.post("/api/register", async (req, res) => {
       });
     }
 
-    // Create new user
     const user = new User({
       name,
       email,
-      password, // This will be hashed by the pre-save hook
+      password,
       role,
       studentId: role === "student" ? studentId : undefined,
       autoId: role === "driver" ? autoId : undefined,
@@ -143,14 +131,12 @@ app.post("/api/register", async (req, res) => {
 });
 
 // User Login
-// ✅ FIXED: User Login
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password, role } = req.body;
 
     console.log("🔐 Login attempt:", { email, role });
 
-    // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
       console.log("❌ User not found:", email);
@@ -160,7 +146,6 @@ app.post("/api/login", async (req, res) => {
       });
     }
 
-    // Check if role matches
     if (user.role !== role) {
       console.log("❌ Role mismatch:", user.role, "!=", role);
       return res.status(400).json({
@@ -169,7 +154,6 @@ app.post("/api/login", async (req, res) => {
       });
     }
 
-    // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       console.log("❌ Invalid password for:", email);
@@ -179,7 +163,6 @@ app.post("/api/login", async (req, res) => {
       });
     }
 
-    // Update user as online
     user.isOnline = true;
     user.lastSeen = new Date();
     await user.save();
@@ -248,32 +231,24 @@ app.delete("/api/debug/clear-users", async (req, res) => {
   try {
     await User.deleteMany({});
     await RideRequest.deleteMany({});
-
-    // Reset in-memory storage
     Object.keys(rideRequests).forEach((point) => {
       rideRequests[point] = [];
     });
-
     res.json({ success: true, message: "All users and ride requests cleared" });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Add these before the socket.io logic
-
 // Get user's current ride status
 app.get("/api/user/ride-status/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-
-    // Check for active ride requests
     const activeRequest = await RideRequest.findOne({
       student: userId,
       status: { $in: ["pending", "accepted"] },
     }).populate("driver", "name");
 
-    // Check for driver's current status
     const driver = await User.findById(userId);
     let driverStatus = null;
     if (driver && driver.role === "driver") {
@@ -307,15 +282,11 @@ app.get("/api/user/ride-status/:userId", async (req, res) => {
 app.get("/api/driver/status/:driverId", async (req, res) => {
   try {
     const { driverId } = req.params;
-
     const driver = await User.findById(driverId);
     if (!driver || driver.role !== "driver") {
-      return res
-        .status(404)
-        .json({ success: false, message: "Driver not found" });
+      return res.status(404).json({ success: false, message: "Driver not found" });
     }
 
-    // Get current ride requests for this driver
     const currentRides = await RideRequest.find({
       driver: driverId,
       status: "accepted",
@@ -378,10 +349,6 @@ app.get("/api/ride-requests/active", async (req, res) => {
   }
 });
 
-// Serve static files
-// app.use(express.static(path.join(__dirname, "../dist")));
-
-// Socket.io logic
 // Socket.io logic
 io.on("connection", (socket) => {
   console.log("✅ New WebSocket Connected:", socket.id);
@@ -891,30 +858,26 @@ io.on("connection", (socket) => {
 const isProduction = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 5500;
 
-// Serve static files from React build in production
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, "../frontend/dist")));
+
+// Production: Serve React app for all non-API routes
 if (isProduction) {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
-  
-  // Handle React routing, return all requests to React app
-  app.get("*", function (req, res) {
+  // FIX: Use regex pattern that works with Express 5
+  app.get(/^\/(?!api).*/, (req, res) => {
     res.sendFile(path.join(__dirname, "../frontend/dist", "index.html"));
   });
 }
 
-
-
-// Connect to MongoDB
-mongoose
-  .connect(MONGODB_URI)
+// Connect to MongoDB and start server
+mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log("✅ MongoDB Connected Successfully");
-
-    // Start server only after DB connection
-    const PORT = process.env.PORT || 5500;
     server.listen(PORT, () => {
       console.log(`🚀 Backend Server running at http://localhost:${PORT}`);
       console.log(`📡 Socket.io ready for connections`);
       console.log(`🗄️  MongoDB connected: ✅`);
+      console.log(`🌐 Environment: ${isProduction ? 'Production' : 'Development'}`);
     });
   })
   .catch((err) => {
@@ -922,4 +885,5 @@ mongoose
     process.exit(1);
   });
 
+  
 // sudo kill -9 $(sudo lsof -t -i:5500)

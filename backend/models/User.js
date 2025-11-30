@@ -107,3 +107,11 @@ userSchema.methods.freeSeat = async function() {
 };
 
 module.exports = mongoose.model('User', userSchema);
+
+
+
+
+
+
+
+

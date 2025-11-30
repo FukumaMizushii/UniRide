@@ -1,8 +1,9 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-backend-service.onrender.com' 
-  : 'http://localhost:5500';
+const SOCKET_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5500';
 
-const socket = io(SOCKET_URL);
+const socket = io(SOCKET_URL, {
+  transports: ['websocket', 'polling'] // Important for production
+});
+
 export default socket;

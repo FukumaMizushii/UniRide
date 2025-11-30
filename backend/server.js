@@ -1,5 +1,9 @@
 const path = require("path");
-require("dotenv").config({ path: path.resolve(__dirname, ".env") });
+// Load environment variables based on NODE_ENV
+const envFile =
+  process.env.NODE_ENV === "production" ? ".env.production" : ".env";
+require("dotenv").config({ path: path.resolve(__dirname, envFile) });
+// require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 const express = require("express");
 const http = require("http");
 const socketio = require("socket.io");
@@ -20,7 +24,7 @@ let MONGODB_URI = process.env.MONGODB_URI;
 if (MONGODB_URI && MONGODB_URI.includes("<db_password>")) {
   MONGODB_URI = MONGODB_URI.replace(
     "<db_password>",
-    process.env.DB_PASSWORD || ''
+    process.env.DB_PASSWORD || ""
   );
 }
 
@@ -60,10 +64,10 @@ app.get("/api/points", (req, res) => {
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
-  res.json({ 
-    status: "OK", 
+  res.json({
+    status: "OK",
     message: "UniRide Backend is running",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -293,7 +297,9 @@ app.get("/api/driver/status/:driverId", async (req, res) => {
     const { driverId } = req.params;
     const driver = await User.findById(driverId);
     if (!driver || driver.role !== "driver") {
-      return res.status(404).json({ success: false, message: "Driver not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Driver not found" });
     }
 
     const currentRides = await RideRequest.find({
@@ -864,24 +870,26 @@ io.on("connection", (socket) => {
 });
 
 // Production settings
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === "production";
 const PORT = process.env.PORT || 5500;
 
 // Connect to MongoDB and start server
-mongoose.connect(MONGODB_URI)
+mongoose
+  .connect(MONGODB_URI)
   .then(() => {
     console.log("✅ MongoDB Connected Successfully");
     server.listen(PORT, () => {
       console.log(`🚀 Backend Server running at http://localhost:${PORT}`);
       console.log(`📡 Socket.io ready for connections`);
       console.log(`🗄️  MongoDB connected: ✅`);
-      console.log(`🌐 Environment: ${isProduction ? 'Production' : 'Development'}`);
+      console.log(
+        `🌐 Environment: ${isProduction ? "Production" : "Development"}`
+      );
     });
   })
   .catch((err) => {
     console.error("❌ MongoDB Connection Error:", err);
     process.exit(1);
   });
-
 
 // sudo kill -9 $(sudo lsof -t -i:5500)

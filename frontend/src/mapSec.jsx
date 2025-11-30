@@ -13,7 +13,8 @@ import ladiesHall from "./assets/ladies-hall.jpg";
 
 const MapSec = () => {
   const navigate = useNavigate();
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5500';
+  const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5500";
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef({});
@@ -94,9 +95,7 @@ const MapSec = () => {
   const fetchActiveRequests = async () => {
     try {
       console.log("🔄 Fetching active ride requests from database...");
-      const response = await fetch(
-        `${API_BASE_URL}/api/ride-requests/active`
-      );
+      const response = await fetch(`${API_BASE_URL}/api/ride-requests/active`);
       const data = await response.json();
 
       if (data.success) {
@@ -239,9 +238,18 @@ const MapSec = () => {
           markerZoomAnimation: false,
         }).setView(center, 16);
 
-        L.tileLayer("https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png", {
-          attribution: "© Wikimedia",
-        }).addTo(mapInstance.current);
+        // L.tileLayer("https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png", {
+        //   attribution: "© Wikimedia",
+        // }).addTo(mapInstance.current);
+
+        const tileLayer = L.tileLayer(
+          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          {
+            attribution: "© OpenStreetMap contributors",
+            maxZoom: 19,
+            subdomains: ["a", "b", "c"],
+          }
+        ).addTo(mapInstance.current);
 
         // Use setTimeout to avoid animation conflicts
         setTimeout(() => {

@@ -13,7 +13,8 @@ import ladiesHall from "./assets/ladies-hall.jpg";
 
 const DriverPortal = () => {
   const navigate = useNavigate();
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5500';
+  const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5500";
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef({});
@@ -215,9 +216,7 @@ const DriverPortal = () => {
   const fetchActiveRequests = async () => {
     try {
       console.log("🔄 Fetching active ride requests from database...");
-      const response = await fetch(
-        `${API_BASE_URL}/api/ride-requests/active`
-      );
+      const response = await fetch(`${API_BASE_URL}/api/ride-requests/active`);
       const data = await response.json();
 
       if (data.success) {
@@ -374,9 +373,46 @@ const DriverPortal = () => {
           markerZoomAnimation: false,
         }).setView(center, 16);
 
-        L.tileLayer("https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png", {
-          attribution: "© Wikimedia",
-        }).addTo(mapInstance.current);
+        // L.tileLayer("https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png", {
+        //   attribution: "© Wikimedia",
+        // }).addTo(mapInstance.current);
+
+        
+        const tileLayer = L.tileLayer(
+          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          {
+            attribution: "© OpenStreetMap contributors",
+            maxZoom: 19,
+            subdomains: ["a", "b", "c"],
+          }
+        ).addTo(mapInstance.current);
+
+
+// Alternative tile providers as fallback (uncomment if needed)
+/*
+// Fallback 1: OpenStreetMap Hot
+const osmHot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team',
+  maxZoom: 19
+});
+
+// Fallback 2: CartoDB Voyager
+const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap contributors, © CartoDB',
+  maxZoom: 20
+});
+
+// Create layer group with multiple options
+const baseMaps = {
+  "OpenStreetMap": tileLayer,
+  "OSM Hot": osmHot,
+  "CartoDB Voyager": cartoVoyager
+};
+
+// Add the default one
+tileLayer.addTo(mapInstance.current);
+*/
+
 
         // Use setTimeout to avoid animation conflicts
         setTimeout(() => {

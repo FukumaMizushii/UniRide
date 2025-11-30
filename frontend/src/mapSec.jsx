@@ -13,6 +13,7 @@ import ladiesHall from "./assets/ladies-hall.jpg";
 
 const MapSec = () => {
   const navigate = useNavigate();
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5500';
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef({});
@@ -50,7 +51,7 @@ const MapSec = () => {
     try {
       console.log("🔄 Fetching student ride status from database...");
       const response = await fetch(
-        `http://localhost:5500/api/user/ride-status/${studentId}`
+        `${API_BASE_URL}/api/user/ride-status/${studentId}`
       );
       const data = await response.json();
 
@@ -94,7 +95,7 @@ const MapSec = () => {
     try {
       console.log("🔄 Fetching active ride requests from database...");
       const response = await fetch(
-        "http://localhost:5500/api/ride-requests/active"
+        `${API_BASE_URL}/api/ride-requests/active`
       );
       const data = await response.json();
 

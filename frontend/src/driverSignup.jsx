@@ -4,6 +4,9 @@ import { useState } from "react";
 const SignupFormDriver = () => {
   const navigate = useNavigate();
 
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5500';
+
+
   const [formData, setFormData] = useState({
     name: "",
     autoID: "",
@@ -40,7 +43,7 @@ const SignupFormDriver = () => {
     setLoading(true);
     
     try {
-      const response = await fetch('http://localhost:5500/api/register', {
+      const response = await fetch(`${API_BASE_URL}/api/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

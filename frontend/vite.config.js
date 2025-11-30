@@ -6,9 +6,14 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [tailwindcss(), react()],
   server: {
-    // This setting ensures Vite binds to all network interfaces (0.0.0.0),
-    // making it accessible via your local IP (192.168.0.106)
     host: "0.0.0.0",
     port: 5173,
   },
+  // Add this for production build
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+  },
+  // Update base URL for production
+  base: process.env.NODE_ENV === 'production' ? '/' : '/',
 });

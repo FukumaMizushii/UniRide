@@ -16,30 +16,15 @@ const io = socketio(server, {
   },
 });
 
+
+
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI.replace(
   "<db_password>",
   process.env.DB_PASSWORD
 );
 
-// Connect to MongoDB
-mongoose
-  .connect(MONGODB_URI)
-  .then(() => {
-    console.log("✅ MongoDB Connected Successfully");
 
-    // Start server only after DB connection
-    const PORT = process.env.PORT || 5500;
-    server.listen(PORT, () => {
-      console.log(`🚀 Backend Server running at http://localhost:${PORT}`);
-      console.log(`📡 Socket.io ready for connections`);
-      console.log(`🗄️  MongoDB connected: ✅`);
-    });
-  })
-  .catch((err) => {
-    console.error("❌ MongoDB Connection Error:", err);
-    process.exit(1);
-  });
 
 
 // Import Models
@@ -394,7 +379,7 @@ app.get("/api/ride-requests/active", async (req, res) => {
 });
 
 // Serve static files
-app.use(express.static(path.join(__dirname, "../dist")));
+// app.use(express.static(path.join(__dirname, "../dist")));
 
 // Socket.io logic
 // Socket.io logic
@@ -902,6 +887,39 @@ io.on("connection", (socket) => {
   });
 });
 
-// const PORT = process.env.PORT || 5500;
+// Production settings
+const isProduction = process.env.NODE_ENV === 'production';
+const PORT = process.env.PORT || 5500;
+
+// Serve static files from React build in production
+if (isProduction) {
+  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+  
+  // Handle React routing, return all requests to React app
+  app.get("*", function (req, res) {
+    res.sendFile(path.join(__dirname, "../frontend/dist", "index.html"));
+  });
+}
+
+
+
+// Connect to MongoDB
+mongoose
+  .connect(MONGODB_URI)
+  .then(() => {
+    console.log("✅ MongoDB Connected Successfully");
+
+    // Start server only after DB connection
+    const PORT = process.env.PORT || 5500;
+    server.listen(PORT, () => {
+      console.log(`🚀 Backend Server running at http://localhost:${PORT}`);
+      console.log(`📡 Socket.io ready for connections`);
+      console.log(`🗄️  MongoDB connected: ✅`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB Connection Error:", err);
+    process.exit(1);
+  });
 
 // sudo kill -9 $(sudo lsof -t -i:5500)

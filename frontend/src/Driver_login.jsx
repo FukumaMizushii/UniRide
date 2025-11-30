@@ -6,6 +6,10 @@ import { FaCarSide } from "react-icons/fa";
 
 const DriverLg = () => {
   const navigate = useNavigate();
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5500';
+
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -30,7 +34,7 @@ const DriverLg = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:5500/api/login", {
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

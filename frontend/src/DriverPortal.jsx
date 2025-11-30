@@ -13,6 +13,7 @@ import ladiesHall from "./assets/ladies-hall.jpg";
 
 const DriverPortal = () => {
   const navigate = useNavigate();
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5500';
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef({});
@@ -192,7 +193,7 @@ const DriverPortal = () => {
     try {
       console.log("🔄 Fetching driver status from database...");
       const response = await fetch(
-        `http://localhost:5500/api/driver/status/${driverId}`
+        `${API_BASE_URL}/api/driver/status/${driverId}`
       );
       const data = await response.json();
 
@@ -215,7 +216,7 @@ const DriverPortal = () => {
     try {
       console.log("🔄 Fetching active ride requests from database...");
       const response = await fetch(
-        "http://localhost:5500/api/ride-requests/active"
+        `${API_BASE_URL}/api/ride-requests/active`
       );
       const data = await response.json();
 

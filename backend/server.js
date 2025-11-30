@@ -15,7 +15,7 @@ const io = socketio(server, {
   },
 });
 
-// MongoDB Connection - FIX: Check if MONGODB_URI exists
+// MongoDB Connection
 let MONGODB_URI = process.env.MONGODB_URI;
 if (MONGODB_URI && MONGODB_URI.includes("<db_password>")) {
   MONGODB_URI = MONGODB_URI.replace(
@@ -56,6 +56,15 @@ fixedPoints.forEach((pt) => (rideRequests[pt.name] = []));
 // API Routes
 app.get("/api/points", (req, res) => {
   res.json(fixedPoints);
+});
+
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "OK", 
+    message: "UniRide Backend is running",
+    timestamp: new Date().toISOString()
+  });
 });
 
 // User Registration
@@ -858,17 +867,6 @@ io.on("connection", (socket) => {
 const isProduction = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 5500;
 
-// Serve static files from React build
-app.use(express.static(path.join(__dirname, "../frontend/dist")));
-
-// Production: Serve React app for all non-API routes
-if (isProduction) {
-  // FIX: Use regex pattern that works with Express 5
-  app.get(/^\/(?!api).*/, (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend/dist", "index.html"));
-  });
-}
-
 // Connect to MongoDB and start server
 mongoose.connect(MONGODB_URI)
   .then(() => {
@@ -885,5 +883,5 @@ mongoose.connect(MONGODB_URI)
     process.exit(1);
   });
 
-  
+
 // sudo kill -9 $(sudo lsof -t -i:5500)

@@ -9,11 +9,10 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
   },
-  // Add this for production build
   build: {
     outDir: 'dist',
     sourcemap: false,
   },
-  // Update base URL for production
-  base: process.env.NODE_ENV === 'production' ? '/' : '/',
+  // Add this for proper SPA routing
+  base: './',
 });

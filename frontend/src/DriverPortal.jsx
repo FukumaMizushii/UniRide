@@ -580,10 +580,10 @@ const DriverPortal = () => {
     const handleManualSyncRequest = async (event) => {
       const { userId, role } = event.detail;
 
-      if (user && user.id === userId && role === "student") {
+      if (user && user.id === userId && role === "driver") {
         console.log("🔄 Manual sync triggered from navbar");
         setIsLoading(true);
-        await fetchStudentStatus(user.id);
+        await fetchDriverStatus(user.id);
         await fetchActiveRequests();
         setIsLoading(false);
       }

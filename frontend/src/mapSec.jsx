@@ -250,6 +250,30 @@ const MapSec = () => {
             subdomains: ["a", "b", "c"],
           }
         ).addTo(mapInstance.current);
+        // Alternative tile providers as fallback (uncomment if needed)
+        /*
+        // Fallback 1: OpenStreetMap Hot
+        const osmHot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team',
+          maxZoom: 19
+        });
+
+        // Fallback 2: CartoDB Voyager
+        const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution: '© OpenStreetMap contributors, © CartoDB',
+          maxZoom: 20
+        });
+
+        // Create layer group with multiple options
+        const baseMaps = {
+          "OpenStreetMap": tileLayer,
+          "OSM Hot": osmHot,
+          "CartoDB Voyager": cartoVoyager
+        };
+
+        // Add the default one
+        tileLayer.addTo(mapInstance.current);
+        */
 
         // Use setTimeout to avoid animation conflicts
         setTimeout(() => {

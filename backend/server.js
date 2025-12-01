@@ -69,6 +69,11 @@ app.get("/api/health", (req, res) => {
     message: "UniRide Backend is running",
     timestamp: new Date().toISOString(),
   });
+  // // Open browser console (F12) and run:
+  // fetch("http://localhost:5500/api/health")
+  //   .then((response) => response.json())
+  //   .then((data) => console.log("Backend Health:", data))
+  //   .catch((error) => console.error("Health Check Failed:", error));
 });
 
 // User Registration

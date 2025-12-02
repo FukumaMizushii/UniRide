@@ -1,3 +1,7 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
+.rotated-marker > div > div {
+  transition: transform 200ms linear;
+  will-change: transform;
+}

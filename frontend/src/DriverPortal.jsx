@@ -11,13 +11,77 @@ import shahHall from "./assets/shah-paran-hall.jpg";
 import mujtobaHall from "./assets/mujtoba-hall.jpg";
 import ladiesHall from "./assets/ladies-hall.jpg";
 
+// -- add near the top (below your imports) --
+function deg2rad(d) {
+  return (d * Math.PI) / 180;
+}
+function rad2deg(r) {
+  return (r * 180) / Math.PI;
+}
+
+/** calculateBearing(lat1, lon1, lat2, lon2)
+ * returns bearing in degrees 0..360 where 0 = North, 90 = East
+ */
+function calculateBearing(lat1, lon1, lat2, lon2) {
+  if (
+    lat1 === undefined ||
+    lon1 === undefined ||
+    lat2 === undefined ||
+    lon2 === undefined
+  )
+    return 0;
+
+  const φ1 = deg2rad(lat1);
+  const φ2 = deg2rad(lat2);
+  const Δλ = deg2rad(lon2 - lon1);
+
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x =
+    Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+
+  let θ = Math.atan2(y, x); // radians -π..+π
+  θ = rad2deg(θ); // degrees -180..+180
+  return (θ + 360) % 360;
+}
+
+// create a divIcon that rotates its inner SVG/emoji by `bearing` degrees.
+// labelHtml: optional inner HTML (svg, emoji, etc)
+// size: [w,h] and anchor default to center
+function createRotatedDivIcon({
+  bearing = 0,
+  labelHtml = "🚗",
+  size = [45, 45],
+  className = "",
+} = {}) {
+  const [w, h] = size;
+  // We rotate the inner element so 'iconAnchor' and map markers remain stable.
+  const html = `
+    <div style="width:${w}px;height:${h}px;display:flex;align-items:center;justify-content:center;">
+      <div style="transform: rotate(${bearing}deg); transition: transform 200ms linear; display:flex; align-items:center; justify-content:center; width:${w}px; height:${h}px;">
+        ${labelHtml}
+      </div>
+    </div>
+  `;
+  return window.L?.divIcon({
+    html,
+    className: `rotated-marker ${className}`,
+    iconSize: [w, h],
+    iconAnchor: [Math.round(w / 2), Math.round(h / 2)],
+    popupAnchor: [0, -Math.round(h / 2)],
+  });
+}
+
 const DriverPortal = () => {
   const navigate = useNavigate();
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5500';
+  const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5500";
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef({});
   const pointMarkersRef = useRef({});
+  const prevDriverLocationRef = useRef(null); // stores { latitude, longitude }
+  const lastBearingUpdateRef = useRef(0);
+  const BEARING_UPDATE_INTERVAL = 1000; // Update bearing every 1 second max
 
   // State from database
   const [user, setUser] = useState(null);
@@ -41,6 +105,16 @@ const DriverPortal = () => {
     { title: "Mujtoba Ali Hall", point: "Mujtoba Ali Hall", category: "hall" },
     { title: "Ladies Hall", point: "Ladies Hall", category: "hall" },
   ];
+
+  // Reusable function for driver popup content
+  const getDriverPopupContent = (driverName, autoId, seats, isCurrentDriver = false) => `
+    <div style="text-align: center;">
+      <strong>🚗 ${isCurrentDriver ? 'You (Driver)' : 'Other Driver'}</strong><br>
+      Name: ${driverName}<br>
+      ${autoId ? `Auto ID: ${autoId}<br>` : ''}
+      Seats: ${seats}/6 available
+    </div>
+  `;
 
   // Fetch driver status from database
   const fetchDriverStatus = async (driverId) => {
@@ -69,9 +143,7 @@ const DriverPortal = () => {
   const fetchActiveRequests = async () => {
     try {
       console.log("🔄 Fetching active ride requests from database...");
-      const response = await fetch(
-        `${API_BASE_URL}/api/ride-requests/active`
-      );
+      const response = await fetch(`${API_BASE_URL}/api/ride-requests/active`);
       const data = await response.json();
 
       if (data.success) {
@@ -149,7 +221,7 @@ const DriverPortal = () => {
     return () => window.removeEventListener("focus", handleFocus);
   }, [user]);
 
-  // Initialize user and location tracking
+  // Initialize user and location tracking - SINGLE SOURCE OF TRUTH for current driver marker
   useEffect(() => {
     if (!user) return;
 
@@ -158,15 +230,96 @@ const DriverPortal = () => {
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          setDriverLocation({ latitude, longitude });
+          const newLoc = { latitude, longitude };
 
+          // compute bearing using previous position if exists
+          const prev = prevDriverLocationRef.current;
+          let bearing = 0;
+          
+          const now = Date.now();
+          if (prev && now - lastBearingUpdateRef.current >= BEARING_UPDATE_INTERVAL) {
+            bearing = calculateBearing(
+              prev.latitude,
+              prev.longitude,
+              latitude,
+              longitude
+            );
+            lastBearingUpdateRef.current = now;
+          }
+
+          // update prev for next watch tick
+          prevDriverLocationRef.current = newLoc;
+
+          // update state
+          setDriverLocation(newLoc);
+
+          // emit to server
           socket.emit("send-location", {
             permanentID: user.id,
-            latitude: latitude,
-            longitude: longitude,
+            latitude,
+            longitude,
             name: user.name,
           });
+
+          // Update marker icon rotation if map is initialized
+          if (window.L && mapInstance.current) {
+            const L = window.L;
+            
+            // Current driver icon HTML
+            const currentDriverHtml = `
+              <div style="display:flex;align-items:center;justify-content:center;font-size:30px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3)); background: rgba(59, 130, 246, 0.9); border-radius: 50%; width:45px; height:45px; border:3px solid white;">
+                🚗
+              </div>
+            `;
+
+            const icon = createRotatedDivIcon({
+              bearing: bearing,
+              labelHtml: currentDriverHtml,
+              size: [45, 45],
+              className: "current-driver-marker",
+            });
+
+            // Update or create marker
+            if (markersRef.current.currentDriver) {
+              try {
+                markersRef.current.currentDriver.setIcon(icon);
+                markersRef.current.currentDriver.setLatLng([
+                  latitude,
+                  longitude,
+                ]);
+              } catch (e) {
+                // If anything odd, recreate marker
+                mapInstance.current.removeLayer(
+                  markersRef.current.currentDriver
+                );
+                markersRef.current.currentDriver = L.marker(
+                  [latitude, longitude],
+                  { icon }
+                )
+                  .addTo(mapInstance.current)
+                  .bindPopup(
+                    getDriverPopupContent(user.name, user.autoId, availableSeats, true)
+                  )
+                  .openPopup();
+              }
+            } else {
+              // Initial creation
+              markersRef.current.currentDriver = L.marker(
+                [latitude, longitude],
+                { icon }
+              )
+                .addTo(mapInstance.current)
+                .bindPopup(
+                  getDriverPopupContent(user.name, user.autoId, availableSeats, true)
+                )
+                .openPopup();
+            }
+
+            // Keep the map centered
+            mapInstance.current.setView([latitude, longitude], 16);
+          }
         },
+
         (err) => console.error("❌ Location error:", err),
         {
           enableHighAccuracy: true,
@@ -177,7 +330,7 @@ const DriverPortal = () => {
 
       return () => navigator.geolocation.clearWatch(watchId);
     }
-  }, [user]);
+  }, [user, availableSeats]);
 
   // Initialize Map
   useEffect(() => {
@@ -207,8 +360,7 @@ const DriverPortal = () => {
           markerZoomAnimation: false,
         }).setView(center, 16);
 
-
-         const tileLayer = L.tileLayer(
+        const tileLayer = L.tileLayer(
           "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
           {
             attribution: "© OpenStreetMap contributors",
@@ -337,59 +489,20 @@ const DriverPortal = () => {
       }
       // Clear all markers
       Object.keys(pointMarkersRef.current).forEach((key) => {
+        const marker = pointMarkersRef.current[key];
+        if (marker && marker.remove) marker.remove();
         pointMarkersRef.current[key] = null;
       });
+      
       Object.keys(markersRef.current).forEach((key) => {
+        const obj = markersRef.current[key];
+        // Handle both shapes: { marker, lastPos } or plain marker
+        const marker = obj?.marker || obj;
+        if (marker && marker.remove) marker.remove();
         markersRef.current[key] = null;
       });
     };
   }, [isLoading, rideRequests]);
-
-  // Enhanced driver location with capacity info
-  useEffect(() => {
-    if (!driverLocation || !window.L || !mapInstance.current || isLoading)
-      return;
-
-    const L = window.L;
-
-    const currentDriverIcon = L.divIcon({
-      html: `
-      <div style="display: flex; align-items: end; justify-content: center; font-size: 30px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); background: rgba(59, 130, 246, 0.9); border-radius: 50%; width: 45px; height: 45px; border: 3px solid white;">
-        🚗
-      </div>
-    `,
-      className: "current-driver-marker",
-      iconSize: [45, 45],
-      iconAnchor: [22, 22],
-      popupAnchor: [0, -22],
-    });
-
-    if (markersRef.current.currentDriver) {
-      mapInstance.current.removeLayer(markersRef.current.currentDriver);
-    }
-
-    markersRef.current.currentDriver = L.marker(
-      [driverLocation.latitude, driverLocation.longitude],
-      { icon: currentDriverIcon }
-    )
-      .addTo(mapInstance.current)
-      .bindPopup(
-        `
-        <div style="text-align: center;">
-          <strong>🚗 You (Driver)</strong><br>
-          Name: ${user?.name}<br>
-          Auto ID: ${user?.autoId}<br>
-          Seats: ${availableSeats}/6 available
-        </div>
-      `
-      )
-      .openPopup();
-
-    mapInstance.current.setView(
-      [driverLocation.latitude, driverLocation.longitude],
-      16
-    );
-  }, [driverLocation, user, availableSeats, isLoading]);
 
   // Socket Event Handlers with database sync
   useEffect(() => {
@@ -402,42 +515,70 @@ const DriverPortal = () => {
       if (!window.L || !mapInstance.current) return;
       const L = window.L;
 
-      const otherDriverIcon = L.divIcon({
-        html: `
-        <div style="display: flex; align-items: end; justify-content: center; font-size: 30px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); background: rgba(34, 197, 94, 0.8); border-radius: 50%; width: 40px; height: 40px; border: 3px solid white;">
+      // compute bearing from the last known location for this driver
+      const existing = markersRef.current[driverId];
+      const lastPos = existing?.lastPos; // { latitude, longitude } or undefined
+      let bearing = 0;
+      
+      // Only calculate bearing if we have previous position and enough time has passed
+      if (lastPos) {
+        bearing = calculateBearing(
+          lastPos.latitude,
+          lastPos.longitude,
+          latitude,
+          longitude
+        );
+      }
+
+      const otherDriverHtml = `
+        <div style="display:flex;align-items:center;justify-content:center;font-size:30px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3)); background: rgba(34, 197, 94, 0.8); border-radius: 50%; width:40px; height:40px; border: 3px solid white;">
           🚗
-//           <svg xmlns="http://www.w3.org/2000/svg"
-//      viewBox="0 0 640 640"
-//      style="transform: rotate(315deg); fill: red;">
-//   <path d="M541.9 139.5C546.4 127.7 543.6 114.3 534.7 105.4C525.8 96.5 512.4 93.6 500.6 98.2L84.6 258.2C71.9 263 63.7 275.2 64 288.7C64.3 302.2 73.1 314.1 85.9 318.3L262.7 377.2L321.6 554C325.9 566.8 337.7 575.6 351.2 575.9C364.7 576.2 376.9 568 381.8 555.4L541.8 139.4z"/>
-// </svg>
         </div>
-      `,
+      `;
+
+      const icon = createRotatedDivIcon({
+        bearing: bearing,
+        labelHtml: otherDriverHtml,
+        size: [40, 40],
         className: "other-driver-marker",
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        popupAnchor: [0, -20],
       });
 
-      if (markersRef.current[driverId]) {
-        markersRef.current[driverId].setLatLng([latitude, longitude]);
-        markersRef.current[driverId].setPopupContent(`
-          <div style="text-align: center;">
-            <strong>🚗 Other Driver</strong><br>
-            Name: ${name}<br>
-            Seats: ${availableSeats}/${capacity} available
-          </div>
-        `);
+      if (existing && existing.marker) {
+        try {
+          // update position and icon
+          existing.marker.setLatLng([latitude, longitude]);
+          existing.marker.setIcon(icon);
+          existing.marker.setPopupContent(
+            getDriverPopupContent(name, null, availableSeats, false)
+          );
+          // store new lastPos
+          existing.lastPos = { latitude, longitude };
+        } catch (e) {
+          // fallback: remove and recreate marker
+          try {
+            mapInstance.current.removeLayer(existing.marker);
+          } catch (err) {}
+          const m = L.marker([latitude, longitude], { icon }).addTo(
+            mapInstance.current
+          ).bindPopup(
+            getDriverPopupContent(name, null, availableSeats, false)
+          );
+          markersRef.current[driverId] = {
+            marker: m,
+            lastPos: { latitude, longitude },
+          };
+        }
       } else {
-        markersRef.current[driverId] = L.marker([latitude, longitude], {
-          icon: otherDriverIcon,
-        }).addTo(mapInstance.current).bindPopup(`
-            <div style="text-align: center;">
-              <strong>🚗 Other Driver</strong><br>
-              Name: ${name}<br>
-              Seats: ${availableSeats}/${capacity} available
-            </div>
-          `);
+        // new marker
+        const m = L.marker([latitude, longitude], { icon }).addTo(
+          mapInstance.current
+        ).bindPopup(
+          getDriverPopupContent(name, null, availableSeats, false)
+        );
+        markersRef.current[driverId] = {
+          marker: m,
+          lastPos: { latitude, longitude },
+        };
       }
     };
 
@@ -561,11 +702,16 @@ const DriverPortal = () => {
       socket.off("update-point-requests", handleUpdatePointRequests);
       socket.off("ride-request-cancelled", handleRideRequestCancelled);
     };
-  }, [rideRequests, user]);
+  }, [rideRequests, user, availableSeats]);
 
   // Accept ride function
   const acceptRide = (pointName) => {
     if (!user) return;
+    
+    if (availableSeats === 0) {
+      alert("❌ No available seats! Please complete existing rides first.");
+      return;
+    }
 
     socket.emit("accept-ride", {
       driverId: user.id,
@@ -614,8 +760,6 @@ const DriverPortal = () => {
 
   return (
     <div className="mt-5 flex flex-col rounded-2xl items-center gap-4">
-
-
       <div className="w-full max-w-7xl grid md:grid-cols-[80%_20%] grid-cols-1 gap-6">
         {/* Map Section */}
         <div className="flex flex-col justify-center items-center gap-4 bg-amber-100 rounded-2xl p-6 shadow-2xl">
@@ -636,7 +780,7 @@ const DriverPortal = () => {
           />
           <p className="text-sm text-gray-600">
             📍 Red points = Ride requests | ✅ Select destination to accept
-            rides | 🚗 Green = Other drivers
+            rides | 🚗 Green = Other drivers (with rotation based on movement)
           </p>
         </div>
 

@@ -11,6 +11,71 @@ import shahHall from "./assets/shah-paran-hall.jpg";
 import mujtobaHall from "./assets/mujtoba-hall.jpg";
 import ladiesHall from "./assets/ladies-hall.jpg";
 
+// -- add near the top (below your imports) --
+function deg2rad(d) {
+  return (d * Math.PI) / 180;
+}
+function rad2deg(r) {
+  return (r * 180) / Math.PI;
+}
+
+/** calculateBearing(lat1, lon1, lat2, lon2)
+ * returns bearing in degrees 0..360 where 0 = North, 90 = East
+ */
+function calculateBearing(lat1, lon1, lat2, lon2) {
+  if (
+    lat1 === undefined ||
+    lon1 === undefined ||
+    lat2 === undefined ||
+    lon2 === undefined
+  )
+    return 0;
+
+  const φ1 = deg2rad(lat1);
+  const φ2 = deg2rad(lat2);
+  const Δλ = deg2rad(lon2 - lon1);
+
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x =
+    Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+
+  let θ = Math.atan2(y, x); // radians -π..+π
+  θ = rad2deg(θ); // degrees -180..+180
+  return (θ + 360) % 360;
+}
+
+// create a divIcon that rotates its inner SVG/emoji by `bearing` degrees.
+// labelHtml: optional inner HTML (svg, emoji, etc)
+// size: [w,h] and anchor default to center
+function createRotatedDivIcon({
+  bearing = 0,
+  labelHtml = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" 
+         style="transform: rotate(315deg); fill: red;">
+      <path d="M541.9 139.5C546.4 127.7 543.6 114.3 534.7 105.4C525.8 96.5 512.4 93.6 500.6 98.2L84.6 258.2C71.9 263 63.7 275.2 64 288.7C64.3 302.2 73.1 314.1 85.9 318.3L262.7 377.2L321.6 554C325.9 566.8 337.7 575.6 351.2 575.9C364.7 576.2 376.9 568 381.8 555.4L541.8 139.4z"/>
+    </svg>
+  `,
+  size = [45, 45],
+  className = "",
+} = {}) {
+  const [w, h] = size;
+  // We rotate the inner element so 'iconAnchor' and map markers remain stable.
+  const html = `
+    <div style="width:${w}px;height:${h}px;display:flex;align-items:center;justify-content:center;">
+      <div style="transform: rotate(${bearing}deg); transition: transform 200ms linear; display:flex; align-items:center; justify-content:center; width:${w}px; height:${h}px;">
+        ${labelHtml}
+      </div>
+    </div>
+  `;
+  return window.L?.divIcon({
+    html,
+    className: `rotated-marker ${className}`,
+    iconSize: [w, h],
+    iconAnchor: [Math.round(w / 2), Math.round(h / 2)],
+    popupAnchor: [0, -Math.round(h / 2)],
+  });
+}
+
 const MapSec = () => {
   const navigate = useNavigate();
   const API_BASE_URL =
@@ -46,6 +111,16 @@ const MapSec = () => {
     { title: "Mujtoba Ali Hall", point: "Mujtoba Ali Hall", category: "hall" },
     { title: "Ladies Hall", point: "Ladies Hall", category: "hall" },
   ];
+
+  // Reusable function for driver popup content
+  const getDriverPopupContent = (driverName, autoId, seats) => `
+    <div style="text-align: center;">
+      <strong>🚗 Driver</strong><br>
+      Name: ${driverName}<br>
+      ${autoId ? `Auto ID: ${autoId}<br>` : ''}
+      Seats: ${seats}/6 available
+    </div>
+  `;
 
   // Fetch student's current ride status from database
   const fetchStudentStatus = async (studentId) => {
@@ -238,10 +313,6 @@ const MapSec = () => {
           markerZoomAnimation: false,
         }).setView(center, 16);
 
-        // L.tileLayer("https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png", {
-        //   attribution: "© Wikimedia",
-        // }).addTo(mapInstance.current);
-
         const tileLayer = L.tileLayer(
           "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
           {
@@ -250,30 +321,6 @@ const MapSec = () => {
             subdomains: ["a", "b", "c"],
           }
         ).addTo(mapInstance.current);
-        // Alternative tile providers as fallback (uncomment if needed)
-        /*
-        // Fallback 1: OpenStreetMap Hot
-        const osmHot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team',
-          maxZoom: 19
-        });
-
-        // Fallback 2: CartoDB Voyager
-        const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          attribution: '© OpenStreetMap contributors, © CartoDB',
-          maxZoom: 20
-        });
-
-        // Create layer group with multiple options
-        const baseMaps = {
-          "OpenStreetMap": tileLayer,
-          "OSM Hot": osmHot,
-          "CartoDB Voyager": cartoVoyager
-        };
-
-        // Add the default one
-        tileLayer.addTo(mapInstance.current);
-        */
 
         // Use setTimeout to avoid animation conflicts
         setTimeout(() => {
@@ -397,15 +444,22 @@ const MapSec = () => {
       }
       // Clear all markers
       Object.keys(pointMarkersRef.current).forEach((key) => {
+        const marker = pointMarkersRef.current[key];
+        if (marker && marker.remove) marker.remove();
         pointMarkersRef.current[key] = null;
       });
+      
       Object.keys(markersRef.current).forEach((key) => {
+        const obj = markersRef.current[key];
+        // Handle both shapes: { marker, lastPos } or plain marker
+        const marker = obj?.marker || obj;
+        if (marker && marker.remove) marker.remove();
         markersRef.current[key] = null;
       });
     };
   }, [isLoading, rideRequests]);
 
-  // Socket Event Handlers with database sync
+  // Socket Event Handlers with bearing-based rotation
   useEffect(() => {
     const handleDriverLocation = (data) => {
       const { driverId, latitude, longitude, name, availableSeats, capacity } =
@@ -414,37 +468,73 @@ const MapSec = () => {
       if (!window.L || !mapInstance.current) return;
       const L = window.L;
 
-      const carIcon = L.divIcon({
-        html: `
-        <div style="display: flex; align-items: end; justify-content: center; font-size: 30px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); background: rgba(59, 130, 246, 0.8); border-radius: 50%; width: 40px; height: 40px; border: 3px solid white;">
-          🚗
+      // compute bearing from the last known location for this driver
+      const existing = markersRef.current[driverId];
+      const lastPos = existing?.lastPos; // { latitude, longitude } or undefined
+      let bearing = 0;
+      
+      // Only calculate bearing if we have previous position
+      if (lastPos) {
+        bearing = calculateBearing(
+          lastPos.latitude,
+          lastPos.longitude,
+          latitude,
+          longitude
+        );
+      }
+
+      const driverHtml = `
+        <div style="display:flex;align-items:center;justify-content:center;font-size:30px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3)); background: rgba(59, 130, 246, 0.8); border-radius: 50%; width:40px; height:40px; border: 3px solid white;">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" 
+         style="transform: rotate(315deg); fill: red;">
+      <path d="M541.9 139.5C546.4 127.7 543.6 114.3 534.7 105.4C525.8 96.5 512.4 93.6 500.6 98.2L84.6 258.2C71.9 263 63.7 275.2 64 288.7C64.3 302.2 73.1 314.1 85.9 318.3L262.7 377.2L321.6 554C325.9 566.8 337.7 575.6 351.2 575.9C364.7 576.2 376.9 568 381.8 555.4L541.8 139.4z"/>
+    </svg>
         </div>
-      `,
-        className: "car-marker-icon",
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        popupAnchor: [0, -20],
+      `;
+
+      const icon = createRotatedDivIcon({
+        bearing: bearing,
+        labelHtml: driverHtml,
+        size: [40, 40],
+        className: "driver-marker-icon",
       });
 
-      if (markersRef.current[driverId]) {
-        markersRef.current[driverId].setLatLng([latitude, longitude]);
-        markersRef.current[driverId].setPopupContent(`
-          <div style="text-align: center;">
-            <strong>🚗 Driver</strong><br>
-            Name: ${name}<br>
-            Seats: ${availableSeats}/${capacity} available
-          </div>
-        `);
+      if (existing && existing.marker) {
+        try {
+          // update position and icon
+          existing.marker.setLatLng([latitude, longitude]);
+          existing.marker.setIcon(icon);
+          existing.marker.setPopupContent(
+            getDriverPopupContent(name, null, availableSeats)
+          );
+          // store new lastPos
+          existing.lastPos = { latitude, longitude };
+        } catch (e) {
+          // fallback: remove and recreate marker
+          try {
+            mapInstance.current.removeLayer(existing.marker);
+          } catch (err) {}
+          const m = L.marker([latitude, longitude], { icon }).addTo(
+            mapInstance.current
+          ).bindPopup(
+            getDriverPopupContent(name, null, availableSeats)
+          );
+          markersRef.current[driverId] = {
+            marker: m,
+            lastPos: { latitude, longitude },
+          };
+        }
       } else {
-        markersRef.current[driverId] = L.marker([latitude, longitude], {
-          icon: carIcon,
-        }).addTo(mapInstance.current).bindPopup(`
-            <div style="text-align: center;">
-              <strong>🚗 Driver</strong><br>
-              Name: ${name}<br>
-              Seats: ${availableSeats}/${capacity} available
-            </div>
-          `);
+        // new marker
+        const m = L.marker([latitude, longitude], { icon }).addTo(
+          mapInstance.current
+        ).bindPopup(
+          getDriverPopupContent(name, null, availableSeats)
+        );
+        markersRef.current[driverId] = {
+          marker: m,
+          lastPos: { latitude, longitude },
+        };
       }
     };
 
@@ -586,16 +676,6 @@ const MapSec = () => {
   }, [rideRequests, user]);
 
   // Manual sync button
-  // const handleManualSync = async () => {
-  //   if (user?.id) {
-  //     setIsLoading(true);
-  //     await fetchStudentStatus(user.id);
-  //     await fetchActiveRequests();
-  //     setIsLoading(false);
-  //     alert("✅ Student state synced with database!");
-  //   }
-  // };
-
   useEffect(() => {
     const handleManualSyncRequest = async (event) => {
       const { userId, role } = event.detail;
@@ -634,16 +714,6 @@ const MapSec = () => {
 
   return (
     <div className="mt-5 flex flex-col rounded-2xl items-center gap-4">
-      {/* Sync Button */}
-      {/* <div className="w-full max-w-7xl flex justify-end">
-        <button
-          onClick={handleManualSync}
-          className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors"
-        >
-          🔄 Sync with Database
-        </button>
-      </div> */}
-
       {/* Error Display */}
       {requestError && (
         <div className="w-full max-w-7xl bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -711,7 +781,7 @@ const MapSec = () => {
             style={{ minHeight: "600px" }}
           />
           <p className="text-sm text-gray-600">
-            🚗 See driver locations with seat availability | 📍 Select
+            🚗 See driver locations with seat availability (markers rotate based on movement) | 📍 Select
             destination to request rides
           </p>
         </div>
@@ -813,9 +883,9 @@ const MapSec = () => {
                 ? `Waiting at ${currentRequestPoint}`
                 : "Available for booking"}
             </p>
-            {/* <p>
-              <strong>Last Sync:</strong> {new Date().toLocaleTimeString()}
-            </p> */}
+            <p>
+              <strong>Active Drivers:</strong> {Object.keys(markersRef.current).filter(key => key !== "currentDriver").length}
+            </p>
           </div>
         </div>
       </div>

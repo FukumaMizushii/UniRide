@@ -41,6 +41,7 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
 
   let θ = Math.atan2(y, x); // radians -π..+π
   θ = rad2deg(θ); // degrees -180..+180
+  console.log(`Calculated bearing: ${θ}°`);
   return (θ + 360) % 360;
 }
 
@@ -49,7 +50,12 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
 // size: [w,h] and anchor default to center
 function createRotatedDivIcon({
   bearing = 0,
-  labelHtml = "🚗",
+  labelHtml = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" 
+         style="transform: rotate(315deg); fill: red;">
+      <path d="M541.9 139.5C546.4 127.7 543.6 114.3 534.7 105.4C525.8 96.5 512.4 93.6 500.6 98.2L84.6 258.2C71.9 263 63.7 275.2 64 288.7C64.3 302.2 73.1 314.1 85.9 318.3L262.7 377.2L321.6 554C325.9 566.8 337.7 575.6 351.2 575.9C364.7 576.2 376.9 568 381.8 555.4L541.8 139.4z"/>
+    </svg>
+  `,
   size = [45, 45],
   className = "",
 } = {}) {
@@ -220,117 +226,311 @@ const DriverPortal = () => {
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
   }, [user]);
+  
+  // Initialize user and location tracking - SINGLE SOURCE OF TRUTH for current driver marker
+  // useEffect(() => {
+  //   if (!user) return;
+
+  //   // Start location tracking
+  //   if (navigator.geolocation) {
+  //     const watchId = navigator.geolocation.watchPosition(
+  //       (position) => {
+  //         const { latitude, longitude } = position.coords;
+  //         const newLoc = { latitude, longitude };
+
+  //         // compute bearing using previous position if exists
+  //         const prev = prevDriverLocationRef.current;
+  //         let bearing = 0;
+          
+  //         const now = Date.now();
+  //         if (prev && now - lastBearingUpdateRef.current >= BEARING_UPDATE_INTERVAL) {
+  //           bearing = calculateBearing(
+  //             prev.latitude,
+  //             prev.longitude,
+  //             latitude,
+  //             longitude
+  //           );
+  //           lastBearingUpdateRef.current = now;
+  //         }
+
+  //         // update prev for next watch tick
+  //         prevDriverLocationRef.current = newLoc;
+
+  //         // update state
+  //         setDriverLocation(newLoc);
+
+  //         // emit to server
+  //         socket.emit("send-location", {
+  //           permanentID: user.id,
+  //           latitude,
+  //           longitude,
+  //           name: user.name,
+  //         });
+
+  //         // Update marker icon rotation if map is initialized
+  //         if (window.L && mapInstance.current) {
+  //           const L = window.L;
+            
+  //           // Current driver icon HTML
+  //           const currentDriverHtml = `
+  //             <div style="display:flex;align-items:center;justify-content:center;font-size:30px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3)); background: rgba(59, 130, 246, 0.9); border-radius: 50%; width:45px; height:45px; border:3px solid white;">
+  //               <svg xmlns="http://www.w3.org/2000/svg"
+  //                   viewBox="0 0 640 640"
+  //                   style="transform: rotate(315deg); fill: red;">
+  //                 <path d="M541.9 139.5C546.4 127.7 543.6 114.3 534.7 105.4C525.8 96.5 512.4 93.6 500.6 98.2L84.6 258.2C71.9 263 63.7 275.2 64 288.7C64.3 302.2 73.1 314.1 85.9 318.3L262.7 377.2L321.6 554C325.9 566.8 337.7 575.6 351.2 575.9C364.7 576.2 376.9 568 381.8 555.4L541.8 139.4z"/>
+  //               </svg>
+  //             </div>
+  //           `;
+
+  //           const icon = createRotatedDivIcon({
+  //             bearing: bearing,
+  //             labelHtml: currentDriverHtml,
+  //             size: [45, 45],
+  //             className: "current-driver-marker",
+  //           });
+
+  //           // Update or create marker
+  //           if (markersRef.current.currentDriver) {
+  //             try {
+  //               markersRef.current.currentDriver.setIcon(icon);
+  //               markersRef.current.currentDriver.setLatLng([
+  //                 latitude,
+  //                 longitude,
+  //               ]);
+  //             } catch (e) {
+  //               // If anything odd, recreate marker
+  //               mapInstance.current.removeLayer(
+  //                 markersRef.current.currentDriver
+  //               );
+  //               markersRef.current.currentDriver = L.marker(
+  //                 [latitude, longitude],
+  //                 { icon }
+  //               )
+  //                 .addTo(mapInstance.current)
+  //                 .bindPopup(
+  //                   getDriverPopupContent(user.name, user.autoId, availableSeats, true)
+  //                 )
+  //                 .openPopup();
+  //             }
+  //           } else {
+  //             // Initial creation
+  //             markersRef.current.currentDriver = L.marker(
+  //               [latitude, longitude],
+  //               { icon }
+  //             )
+  //               .addTo(mapInstance.current)
+  //               .bindPopup(
+  //                 getDriverPopupContent(user.name, user.autoId, availableSeats, true)
+  //               )
+  //               .openPopup();
+  //           }
+
+  //           // Keep the map centered
+  //           mapInstance.current.setView([latitude, longitude], 16);
+  //         }
+  //       },
+
+  //       (err) => console.error("❌ Location error:", err),
+  //       {
+  //         enableHighAccuracy: true,
+  //         timeout: 5000,
+  //         maximumAge: 0,
+  //       }
+  //     );
+
+  //     return () => navigator.geolocation.clearWatch(watchId);
+  //   }
+  // }, [user, availableSeats]);
 
   // Initialize user and location tracking - SINGLE SOURCE OF TRUTH for current driver marker
-  useEffect(() => {
-    if (!user) return;
+useEffect(() => {
+  if (!user) return;
 
-    // Start location tracking
-    if (navigator.geolocation) {
-      const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          const newLoc = { latitude, longitude };
+  // Helper function to update driver marker
+  const updateDriverMarker = (latitude, longitude, bearing) => {
+    if (!window.L || !mapInstance.current) return;
+    const L = window.L;
+    
+    // Current driver icon HTML
+    const currentDriverHtml = `
+      <div style="display:flex;align-items:center;justify-content:center;font-size:30px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3)); background: rgba(59, 130, 246, 0.9); border-radius: 50%; width:45px; height:45px; border:3px solid white;">
+        <svg xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 640 640"
+            style="transform: rotate(315deg); fill: red;">
+          <path d="M541.9 139.5C546.4 127.7 543.6 114.3 534.7 105.4C525.8 96.5 512.4 93.6 500.6 98.2L84.6 258.2C71.9 263 63.7 275.2 64 288.7C64.3 302.2 73.1 314.1 85.9 318.3L262.7 377.2L321.6 554C325.9 566.8 337.7 575.6 351.2 575.9C364.7 576.2 376.9 568 381.8 555.4L541.8 139.4z"/>
+        </svg>
+      </div>
+    `;
 
-          // compute bearing using previous position if exists
-          const prev = prevDriverLocationRef.current;
-          let bearing = 0;
-          
-          const now = Date.now();
-          if (prev && now - lastBearingUpdateRef.current >= BEARING_UPDATE_INTERVAL) {
-            bearing = calculateBearing(
-              prev.latitude,
-              prev.longitude,
-              latitude,
-              longitude
-            );
-            lastBearingUpdateRef.current = now;
-          }
+    const icon = createRotatedDivIcon({
+      bearing: bearing,
+      labelHtml: currentDriverHtml,
+      size: [45, 45],
+      className: "current-driver-marker",
+    });
 
-          // update prev for next watch tick
-          prevDriverLocationRef.current = newLoc;
-
-          // update state
-          setDriverLocation(newLoc);
-
-          // emit to server
-          socket.emit("send-location", {
-            permanentID: user.id,
-            latitude,
-            longitude,
-            name: user.name,
-          });
-
-          // Update marker icon rotation if map is initialized
-          if (window.L && mapInstance.current) {
-            const L = window.L;
-            
-            // Current driver icon HTML
-            const currentDriverHtml = `
-              <div style="display:flex;align-items:center;justify-content:center;font-size:30px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3)); background: rgba(59, 130, 246, 0.9); border-radius: 50%; width:45px; height:45px; border:3px solid white;">
-                🚗
-              </div>
-            `;
-
-            const icon = createRotatedDivIcon({
-              bearing: bearing,
-              labelHtml: currentDriverHtml,
-              size: [45, 45],
-              className: "current-driver-marker",
-            });
-
-            // Update or create marker
-            if (markersRef.current.currentDriver) {
-              try {
-                markersRef.current.currentDriver.setIcon(icon);
-                markersRef.current.currentDriver.setLatLng([
-                  latitude,
-                  longitude,
-                ]);
-              } catch (e) {
-                // If anything odd, recreate marker
-                mapInstance.current.removeLayer(
-                  markersRef.current.currentDriver
-                );
-                markersRef.current.currentDriver = L.marker(
-                  [latitude, longitude],
-                  { icon }
-                )
-                  .addTo(mapInstance.current)
-                  .bindPopup(
-                    getDriverPopupContent(user.name, user.autoId, availableSeats, true)
-                  )
-                  .openPopup();
-              }
-            } else {
-              // Initial creation
-              markersRef.current.currentDriver = L.marker(
-                [latitude, longitude],
-                { icon }
-              )
-                .addTo(mapInstance.current)
-                .bindPopup(
-                  getDriverPopupContent(user.name, user.autoId, availableSeats, true)
-                )
-                .openPopup();
-            }
-
-            // Keep the map centered
-            mapInstance.current.setView([latitude, longitude], 16);
-          }
-        },
-
-        (err) => console.error("❌ Location error:", err),
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0,
-        }
-      );
-
-      return () => navigator.geolocation.clearWatch(watchId);
+    // Update or create marker
+    if (markersRef.current.currentDriver) {
+      try {
+        markersRef.current.currentDriver.setIcon(icon);
+        markersRef.current.currentDriver.setLatLng([latitude, longitude]);
+      } catch (e) {
+        // If anything odd, recreate marker
+        mapInstance.current.removeLayer(markersRef.current.currentDriver);
+        markersRef.current.currentDriver = L.marker([latitude, longitude], { icon })
+          .addTo(mapInstance.current)
+          .bindPopup(getDriverPopupContent(user.name, user.autoId, availableSeats, true))
+          .openPopup();
+      }
+    } else {
+      // Initial creation
+      markersRef.current.currentDriver = L.marker([latitude, longitude], { icon })
+        .addTo(mapInstance.current)
+        .bindPopup(getDriverPopupContent(user.name, user.autoId, availableSeats, true))
+        .openPopup();
     }
-  }, [user, availableSeats]);
+
+    // Keep the map centered
+    mapInstance.current.setView([latitude, longitude], 16);
+  };
+
+  // ============================================
+  // OPTION 1: LIVE LOCATION TRACKING (REAL GPS)
+  // ============================================
+  // UNCOMMENT THIS SECTION for real GPS tracking
+  // COMMENT OUT the TEST LOCATION SECTION below
+  /*
+  // Start location tracking
+  if (navigator.geolocation) {
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const newLoc = { latitude, longitude };
+
+        // compute bearing using previous position if exists
+        const prev = prevDriverLocationRef.current;
+        let bearing = 0;
+        
+        const now = Date.now();
+        if (prev && now - lastBearingUpdateRef.current >= BEARING_UPDATE_INTERVAL) {
+          bearing = calculateBearing(
+            prev.latitude,
+            prev.longitude,
+            latitude,
+            longitude
+          );
+          lastBearingUpdateRef.current = now;
+        }
+
+        // update prev for next watch tick
+        prevDriverLocationRef.current = newLoc;
+
+        // update state
+        setDriverLocation(newLoc);
+
+        // emit to server
+        socket.emit("send-location", {
+          permanentID: user.id,
+          latitude,
+          longitude,
+          name: user.name,
+        });
+
+        // Update marker icon rotation
+        updateDriverMarker(latitude, longitude, bearing);
+      },
+
+      (err) => console.error("❌ Location error:", err),
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0,
+      }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }
+  */
+
+  // ============================================
+  // OPTION 2: TEST LOCATION SEQUENCE
+  // ============================================
+  // UNCOMMENT THIS SECTION for test locations
+  // COMMENT OUT the LIVE LOCATION SECTION above
+  // /*
+  const testLocations = [
+    { latitude: 24.905822, longitude: 91.839995 },
+    { latitude: 24.907146, longitude: 91.837721 },
+    { latitude: 24.908742, longitude: 91.840339 },
+    { latitude: 24.909287, longitude: 91.837678 },
+    { latitude: 24.909287, longitude: 91.836133 },
+    { latitude: 24.910221, longitude: 91.833429 },
+    { latitude: 24.911778, longitude: 91.834631 },
+    { latitude: 24.913062, longitude: 91.836734 },
+    { latitude: 24.914736, longitude: 91.837635 },
+    { latitude: 24.917304, longitude: 91.838408 },
+    { latitude: 24.916448, longitude: 91.839910 },
+    { latitude: 24.915242, longitude: 91.840296 },
+    { latitude: 24.913724, longitude: 91.841326 },
+    { latitude: 24.912906, longitude: 91.841841 },
+    { latitude: 24.911544, longitude: 91.842613 },
+    { latitude: 24.910805, longitude: 91.842742 },
+  ];
+
+  let currentTestIndex = 0;
+  const TEST_INTERVAL = 1000; // 1 second between locations
+
+  const updateTestLocation = () => {
+    const location = testLocations[currentTestIndex];
+    const newLoc = { latitude: location.latitude, longitude: location.longitude };
+
+    // compute bearing using previous position if exists
+    const prev = prevDriverLocationRef.current;
+    let bearing = 0;
+    
+    const now = Date.now();
+    if (prev && now - lastBearingUpdateRef.current >= BEARING_UPDATE_INTERVAL) {
+      bearing = calculateBearing(
+        prev.latitude,
+        prev.longitude,
+        location.latitude,
+        location.longitude
+      );
+      lastBearingUpdateRef.current = now;
+    }
+
+    // update prev for next tick
+    prevDriverLocationRef.current = newLoc;
+
+    // update state
+    setDriverLocation(newLoc);
+
+    // emit to server
+    socket.emit("send-location", {
+      permanentID: user.id,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      name: user.name,
+    });
+
+    // Update marker icon rotation
+    updateDriverMarker(location.latitude, location.longitude, bearing);
+
+    // Move to next location (loop back to start)
+    currentTestIndex = (currentTestIndex + 1) % testLocations.length;
+  };
+
+  // Start test sequence
+  const testInterval = setInterval(updateTestLocation, TEST_INTERVAL);
+
+  // Initial update
+  updateTestLocation();
+
+  return () => {
+    clearInterval(testInterval);
+  };
+  // */
+}, [user, availableSeats]);
 
   // Initialize Map
   useEffect(() => {
@@ -532,7 +732,11 @@ const DriverPortal = () => {
 
       const otherDriverHtml = `
         <div style="display:flex;align-items:center;justify-content:center;font-size:30px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3)); background: rgba(34, 197, 94, 0.8); border-radius: 50%; width:40px; height:40px; border: 3px solid white;">
-          🚗
+          <svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 640 640"
+     style="transform: rotate(315deg); fill: red;">
+  <path d="M541.9 139.5C546.4 127.7 543.6 114.3 534.7 105.4C525.8 96.5 512.4 93.6 500.6 98.2L84.6 258.2C71.9 263 63.7 275.2 64 288.7C64.3 302.2 73.1 314.1 85.9 318.3L262.7 377.2L321.6 554C325.9 566.8 337.7 575.6 351.2 575.9C364.7 576.2 376.9 568 381.8 555.4L541.8 139.4z"/>
+</svg>
         </div>
       `;
 

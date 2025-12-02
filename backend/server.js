@@ -408,9 +408,9 @@ io.on("connection", (socket) => {
         const availableSeats = driver?.availableSeats || 6;
         const capacity = driver?.capacity || 6;
 
-        // console.log(
-        //   `🛰️ Location from ${name}: ${latitude}, ${longitude}, Seats: ${availableSeats}/${capacity}`
-        // );
+        console.log(
+          `🛰️ Location from ${name}: ${latitude}, ${longitude}, Seats: ${availableSeats}/${capacity}`
+        );
 
         // Broadcast to all clients with current capacity info
         io.emit("driver-location", {

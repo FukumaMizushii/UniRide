@@ -69,7 +69,7 @@ function createRotatedDivIcon({
   `;
   return window.L?.divIcon({
     html,
-    className: `rotated-marker ${className}`,
+    className: `rotated-marker smooth-marker ${className}`,
     iconSize: [w, h],
     iconAnchor: [Math.round(w / 2), Math.round(h / 2)],
     popupAnchor: [0, -Math.round(h / 2)],
@@ -96,6 +96,7 @@ const MapSec = () => {
   const [requestError, setRequestError] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [acceptedRide, setAcceptedRide] = useState(null);
+  const [acceptedDriverLocation, setAcceptedDriverLocation] = useState(null);
 
   const allPoints = [
     { title: "SUST Gate", point: "Sust Gate", category: "gate" },
@@ -536,6 +537,17 @@ const MapSec = () => {
           lastPos: { latitude, longitude },
         };
       }
+
+      // Track accepted driver's location for zoom button
+      if (acceptedRide && acceptedRide.driverId === driverId) {
+        console.log('✅ Updating accepted driver location:', { driverId, latitude, longitude });
+        setAcceptedDriverLocation({ latitude, longitude });
+      } else if (acceptedRide) {
+        console.log('⚠️ Driver location received but not the accepted driver:', {
+          receivedDriverId: driverId,
+          acceptedDriverId: acceptedRide.driverId
+        });
+      }
     };
 
     const handleRideRequest = (data) => {
@@ -572,6 +584,7 @@ const MapSec = () => {
     const handleRideAccepted = (data) => {
       setHasActiveRequest(false);
       setAcceptedRide({
+        driverId: data.driverId,
         driverName: data.driverName,
         point: data.point,
         requestId: data.requestId,
@@ -601,6 +614,7 @@ const MapSec = () => {
 
     const handleRideCompleted = async (data) => {
       setAcceptedRide(null);
+      setAcceptedDriverLocation(null);
       console.log("✅ Ride completed and request deleted");
       alert(`✅ ${data.message}`);
 
@@ -673,7 +687,8 @@ const MapSec = () => {
       socket.off("update-point-requests", handleUpdatePointRequests);
       socket.off("ride-request-cancelled", handleRideRequestCancelled);
     };
-  }, [rideRequests, user]);
+  }, [rideRequests, user, acceptedRide]); // Added acceptedRide to fix closure issue
+
 
   // Manual sync button
   useEffect(() => {
@@ -771,9 +786,33 @@ const MapSec = () => {
       <div className="w-full max-w-7xl grid md:grid-cols-[80%_20%] grid-cols-1 gap-6">
         {/* Map Section */}
         <div className="flex flex-col justify-center items-center gap-4 bg-amber-100 rounded-2xl p-6 shadow-2xl">
-          <h1 className="text-4xl font-bold font-serif text-center pt-4">
-            Student Portal - {user.name}
-          </h1>
+          <div className="flex items-center justify-center gap-4 w-full">
+            <h1 className="text-4xl font-bold font-serif text-center pt-4">
+              Student Portal - {user.name}
+            </h1>
+            {acceptedRide && (
+              <button
+                onClick={() => {
+                  if (mapInstance.current && acceptedDriverLocation) {
+                    mapInstance.current.setView(
+                      [acceptedDriverLocation.latitude, acceptedDriverLocation.longitude],
+                      16,
+                      { animate: true, duration: 0.5 }
+                    );
+                  }
+                }}
+                disabled={!acceptedDriverLocation}
+                className={`px-4 py-2 rounded-lg shadow-lg transition-colors font-semibold text-sm whitespace-nowrap ${
+                  acceptedDriverLocation
+                    ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                    : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                }`}
+                title={acceptedDriverLocation ? "Zoom to driver's location" : "Waiting for driver location..."}
+              >
+                🚗 Zoom to Driver
+              </button>
+            )}
+          </div>
 
           <div
             ref={mapRef}

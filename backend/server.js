@@ -762,6 +762,7 @@ io.on("connection", (socket) => {
           const studentSocket = activeSockets[studentReq.student._id];
           if (studentSocket) {
             io.to(studentSocket).emit("ride-accepted", {
+              driverId: driverId,
               driverName: driver.name,
               point,
               requestId: requestId,

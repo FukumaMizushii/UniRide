@@ -41,7 +41,9 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
 
   let θ = Math.atan2(y, x); // radians -π..+π
   θ = rad2deg(θ); // degrees -180..+180
+  console.log(lat1, lon1, lat2, lon2);
   console.log(`Calculated bearing: ${θ}°`);
+
   return (θ + 360) % 360;
 }
 
@@ -70,7 +72,7 @@ function createRotatedDivIcon({
   `;
   return window.L?.divIcon({
     html,
-    className: `rotated-marker ${className}`,
+    className: `rotated-marker smooth-marker ${className}`,
     iconSize: [w, h],
     iconAnchor: [Math.round(w / 2), Math.round(h / 2)],
     popupAnchor: [0, -Math.round(h / 2)],
@@ -87,6 +89,8 @@ const DriverPortal = () => {
   const pointMarkersRef = useRef({});
   const prevDriverLocationRef = useRef(null); // stores { latitude, longitude }
   const lastBearingUpdateRef = useRef(0);
+  const lastBearingRef = useRef(0); // stores the last calculated bearing
+  const availableSeatsRef = useRef(6); // stores current available seats
   const BEARING_UPDATE_INTERVAL = 1000; // Update bearing every 1 second max
 
   // State from database
@@ -226,121 +230,12 @@ const DriverPortal = () => {
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
   }, [user]);
+
+  // Sync availableSeats state with ref
+  useEffect(() => {
+    availableSeatsRef.current = availableSeats;
+  }, [availableSeats]);
   
-  // Initialize user and location tracking - SINGLE SOURCE OF TRUTH for current driver marker
-  // useEffect(() => {
-  //   if (!user) return;
-
-  //   // Start location tracking
-  //   if (navigator.geolocation) {
-  //     const watchId = navigator.geolocation.watchPosition(
-  //       (position) => {
-  //         const { latitude, longitude } = position.coords;
-  //         const newLoc = { latitude, longitude };
-
-  //         // compute bearing using previous position if exists
-  //         const prev = prevDriverLocationRef.current;
-  //         let bearing = 0;
-          
-  //         const now = Date.now();
-  //         if (prev && now - lastBearingUpdateRef.current >= BEARING_UPDATE_INTERVAL) {
-  //           bearing = calculateBearing(
-  //             prev.latitude,
-  //             prev.longitude,
-  //             latitude,
-  //             longitude
-  //           );
-  //           lastBearingUpdateRef.current = now;
-  //         }
-
-  //         // update prev for next watch tick
-  //         prevDriverLocationRef.current = newLoc;
-
-  //         // update state
-  //         setDriverLocation(newLoc);
-
-  //         // emit to server
-  //         socket.emit("send-location", {
-  //           permanentID: user.id,
-  //           latitude,
-  //           longitude,
-  //           name: user.name,
-  //         });
-
-  //         // Update marker icon rotation if map is initialized
-  //         if (window.L && mapInstance.current) {
-  //           const L = window.L;
-            
-  //           // Current driver icon HTML
-  //           const currentDriverHtml = `
-  //             <div style="display:flex;align-items:center;justify-content:center;font-size:30px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3)); background: rgba(59, 130, 246, 0.9); border-radius: 50%; width:45px; height:45px; border:3px solid white;">
-  //               <svg xmlns="http://www.w3.org/2000/svg"
-  //                   viewBox="0 0 640 640"
-  //                   style="transform: rotate(315deg); fill: red;">
-  //                 <path d="M541.9 139.5C546.4 127.7 543.6 114.3 534.7 105.4C525.8 96.5 512.4 93.6 500.6 98.2L84.6 258.2C71.9 263 63.7 275.2 64 288.7C64.3 302.2 73.1 314.1 85.9 318.3L262.7 377.2L321.6 554C325.9 566.8 337.7 575.6 351.2 575.9C364.7 576.2 376.9 568 381.8 555.4L541.8 139.4z"/>
-  //               </svg>
-  //             </div>
-  //           `;
-
-  //           const icon = createRotatedDivIcon({
-  //             bearing: bearing,
-  //             labelHtml: currentDriverHtml,
-  //             size: [45, 45],
-  //             className: "current-driver-marker",
-  //           });
-
-  //           // Update or create marker
-  //           if (markersRef.current.currentDriver) {
-  //             try {
-  //               markersRef.current.currentDriver.setIcon(icon);
-  //               markersRef.current.currentDriver.setLatLng([
-  //                 latitude,
-  //                 longitude,
-  //               ]);
-  //             } catch (e) {
-  //               // If anything odd, recreate marker
-  //               mapInstance.current.removeLayer(
-  //                 markersRef.current.currentDriver
-  //               );
-  //               markersRef.current.currentDriver = L.marker(
-  //                 [latitude, longitude],
-  //                 { icon }
-  //               )
-  //                 .addTo(mapInstance.current)
-  //                 .bindPopup(
-  //                   getDriverPopupContent(user.name, user.autoId, availableSeats, true)
-  //                 )
-  //                 .openPopup();
-  //             }
-  //           } else {
-  //             // Initial creation
-  //             markersRef.current.currentDriver = L.marker(
-  //               [latitude, longitude],
-  //               { icon }
-  //             )
-  //               .addTo(mapInstance.current)
-  //               .bindPopup(
-  //                 getDriverPopupContent(user.name, user.autoId, availableSeats, true)
-  //               )
-  //               .openPopup();
-  //           }
-
-  //           // Keep the map centered
-  //           mapInstance.current.setView([latitude, longitude], 16);
-  //         }
-  //       },
-
-  //       (err) => console.error("❌ Location error:", err),
-  //       {
-  //         enableHighAccuracy: true,
-  //         timeout: 5000,
-  //         maximumAge: 0,
-  //       }
-  //     );
-
-  //     return () => navigator.geolocation.clearWatch(watchId);
-  //   }
-  // }, [user, availableSeats]);
 
   // Initialize user and location tracking - SINGLE SOURCE OF TRUTH for current driver marker
 useEffect(() => {
@@ -379,19 +274,19 @@ useEffect(() => {
         mapInstance.current.removeLayer(markersRef.current.currentDriver);
         markersRef.current.currentDriver = L.marker([latitude, longitude], { icon })
           .addTo(mapInstance.current)
-          .bindPopup(getDriverPopupContent(user.name, user.autoId, availableSeats, true))
+          .bindPopup(getDriverPopupContent(user.name, user.autoId, availableSeatsRef.current, true))
           .openPopup();
       }
     } else {
       // Initial creation
       markersRef.current.currentDriver = L.marker([latitude, longitude], { icon })
         .addTo(mapInstance.current)
-        .bindPopup(getDriverPopupContent(user.name, user.autoId, availableSeats, true))
+        .bindPopup(getDriverPopupContent(user.name, user.autoId, availableSeatsRef.current, true))
         .openPopup();
     }
 
-    // Keep the map centered
-    mapInstance.current.setView([latitude, longitude], 16);
+    // Auto-zoom disabled - use "Zoom to Me" button instead
+    // mapInstance.current.setView([latitude, longitude], 16);
   };
 
   // ============================================
@@ -399,7 +294,7 @@ useEffect(() => {
   // ============================================
   // UNCOMMENT THIS SECTION for real GPS tracking
   // COMMENT OUT the TEST LOCATION SECTION below
-  /*
+  // /*
   // Start location tracking
   if (navigator.geolocation) {
     const watchId = navigator.geolocation.watchPosition(
@@ -409,7 +304,7 @@ useEffect(() => {
 
         // compute bearing using previous position if exists
         const prev = prevDriverLocationRef.current;
-        let bearing = 0;
+        let bearing = lastBearingRef.current; // Start with last known bearing instead of 0
         
         const now = Date.now();
         if (prev && now - lastBearingUpdateRef.current >= BEARING_UPDATE_INTERVAL) {
@@ -420,6 +315,7 @@ useEffect(() => {
             longitude
           );
           lastBearingUpdateRef.current = now;
+          lastBearingRef.current = bearing; // Store the new bearing
         }
 
         // update prev for next watch tick
@@ -450,14 +346,14 @@ useEffect(() => {
 
     return () => navigator.geolocation.clearWatch(watchId);
   }
-  */
+  // */
 
   // ============================================
   // OPTION 2: TEST LOCATION SEQUENCE
   // ============================================
   // UNCOMMENT THIS SECTION for test locations
   // COMMENT OUT the LIVE LOCATION SECTION above
-  // /*
+  /*
   const testLocations = [
     { latitude: 24.905822, longitude: 91.839995 },
     { latitude: 24.907146, longitude: 91.837721 },
@@ -486,7 +382,7 @@ useEffect(() => {
 
     // compute bearing using previous position if exists
     const prev = prevDriverLocationRef.current;
-    let bearing = 0;
+    let bearing = lastBearingRef.current; // Start with last known bearing instead of 0
     
     const now = Date.now();
     if (prev && now - lastBearingUpdateRef.current >= BEARING_UPDATE_INTERVAL) {
@@ -497,6 +393,7 @@ useEffect(() => {
         location.longitude
       );
       lastBearingUpdateRef.current = now;
+      lastBearingRef.current = bearing; // Store the new bearing
     }
 
     // update prev for next tick
@@ -529,8 +426,8 @@ useEffect(() => {
   return () => {
     clearInterval(testInterval);
   };
-  // */
-}, [user, availableSeats]);
+  */
+}, [user]); // Removed availableSeats - it should not restart location tracking
 
   // Initialize Map
   useEffect(() => {
@@ -967,9 +864,28 @@ useEffect(() => {
       <div className="w-full max-w-7xl grid md:grid-cols-[80%_20%] grid-cols-1 gap-6">
         {/* Map Section */}
         <div className="flex flex-col justify-center items-center gap-4 bg-amber-100 rounded-2xl p-6 shadow-2xl">
-          <h1 className="text-4xl font-bold font-serif text-center pt-4">
-            Driver Portal - {user.name}
-          </h1>
+          <div className="flex items-center justify-center gap-4 w-full">
+            <h1 className="text-4xl font-bold font-serif text-center pt-4">
+              Driver Portal - {user.name}
+            </h1>
+            {driverLocation && (
+              <button
+                onClick={() => {
+                  if (mapInstance.current && driverLocation) {
+                    mapInstance.current.setView(
+                      [driverLocation.latitude, driverLocation.longitude],
+                      16,
+                      { animate: true, duration: 0.5 }
+                    );
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 transition-colors font-semibold text-sm whitespace-nowrap"
+                title="Zoom to my location"
+              >
+                📍 Zoom to Me
+              </button>
+            )}
+          </div>
           <div className="bg-green-100 p-3 rounded-lg">
             <p className="text-lg font-semibold">
               Available Seats:{" "}

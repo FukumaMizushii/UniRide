@@ -860,13 +860,13 @@ useEffect(() => {
   }
 
   return (
-    <div className="mt-5 flex flex-col rounded-2xl items-center gap-4">
-      <div className="w-full max-w-7xl grid md:grid-cols-[80%_20%] grid-cols-1 gap-6">
+    <div className="mt-5 flex flex-col rounded-2xl items-center gap-4 p-4">
+      <div className="w-full max-w-7xl grid md:grid-cols-[70%_30%] grid-cols-1 gap-6">
         {/* Map Section */}
-        <div className="flex flex-col justify-center items-center gap-4 bg-amber-100 rounded-2xl p-6 shadow-2xl">
+        <div className="flex flex-col justify-center items-center gap-4 bg-amber-100 rounded-2xl p-6 shadow-2xl order-2 md:order-1">
           <div className="flex items-center justify-center gap-4 w-full">
             <h1 className="text-4xl font-bold font-serif text-center pt-4">
-              Driver Portal - {user.name}
+              Driver Portal
             </h1>
             {driverLocation && (
               <button
@@ -900,13 +900,13 @@ useEffect(() => {
           />
           <p className="text-sm text-gray-600">
             📍 Red points = Ride requests | ✅ Select destination to accept
-            rides | 🚗 Green = Other drivers (with rotation based on movement)
+            rides | 🚗 Green = Other drivers
           </p>
         </div>
 
         {/* Dropdown Section */}
-        <div className="flex flex-col gap-4">
-          <div className="relative bg-white rounded-2xl p-6 shadow-2xl">
+        <div className=" flex flex-col gap-4 z-50 order-1 md:order-2 p-4">
+          <div className="relative bg-white rounded-2xl p-6 shadow-2xl ">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               disabled={availableSeats === 0}
@@ -927,7 +927,7 @@ useEffect(() => {
             </button>
 
             {isDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
+              <div className="top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
                 <div className="p-4">
                   <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">
                     Set Next Stopage ({availableSeats} seats available)
@@ -964,7 +964,7 @@ useEffect(() => {
           </div>
 
           {/* Driver Info */}
-          <div className="text-sm bg-white p-4 rounded-2xl border shadow-lg">
+          <div className="text-sm bg-white p-4 rounded-2xl border shadow-lg z-80">
             <p className="font-bold mb-2">Driver Status (Live from DB):</p>
             <p>
               <strong>Name:</strong> {user.name}

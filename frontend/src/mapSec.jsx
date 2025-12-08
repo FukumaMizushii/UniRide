@@ -783,9 +783,9 @@ const MapSec = () => {
       )}
 
       {/* Main Content */}
-      <div className="w-full max-w-7xl grid md:grid-cols-[80%_20%] grid-cols-1 gap-6">
+      <div className="w-full max-w-7xl grid  md:grid-cols-[70%_30%] grid-cols-1 p-4 gap-6">
         {/* Map Section */}
-        <div className="flex flex-col justify-center items-center gap-4 bg-amber-100 rounded-2xl p-6 shadow-2xl">
+        <div className="flex flex-col justify-center items-center gap-4 bg-amber-100 rounded-2xl p-6 shadow-2xl order-2 md:order-1">
           <div className="flex items-center justify-center gap-4 w-full">
             <h1 className="text-4xl font-bold font-serif text-center pt-4">
               Student Portal - {user.name}
@@ -820,13 +820,12 @@ const MapSec = () => {
             style={{ minHeight: "600px" }}
           />
           <p className="text-sm text-gray-600">
-            🚗 See driver locations with seat availability (markers rotate based on movement) | 📍 Select
-            destination to request rides
+            🚗 See driver locations with seat availability
           </p>
         </div>
 
         {/* Dropdown Section */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 order-1 md:order-2 p-2 relative z-50">
           {/* Ride Booking Dropdown */}
           <div className="relative bg-white rounded-2xl p-6 shadow-2xl">
             <button
@@ -849,7 +848,7 @@ const MapSec = () => {
             </button>
 
             {isDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
+              <div className="top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
                 <div className="p-4">
                   <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">
                     Select Your Destination
@@ -902,7 +901,7 @@ const MapSec = () => {
           </div>
 
           {/* Student Info */}
-          <div className="text-sm bg-white p-4 rounded-2xl border shadow-lg">
+          <div className="text-sm bg-white p-4 rounded-2xl border shadow-lg relative z-60 ">
             <p className="font-bold mb-2">Student Status (Live from DB):</p>
             <p>
               <strong>Name:</strong> {user.name}

@@ -1,9 +1,6 @@
 const path = require("path");
-// Load environment variables based on NODE_ENV
-const envFile =
-  process.env.NODE_ENV === "production" ? ".env.production" : ".env";
+const envFile = process.env.NODE_ENV === "production" ? ".env.production" : ".env";
 require("dotenv").config({ path: path.resolve(__dirname, envFile) });
-// require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 const express = require("express");
 const http = require("http");
 const socketio = require("socket.io");

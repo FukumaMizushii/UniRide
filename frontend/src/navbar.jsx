@@ -180,7 +180,7 @@ const NavBar = () => {
   return (
     <nav className="h-16 bg-[#023e8a] flex justify-between items-center m-0.5 mr-0 rounded-2xl pr-3 relative">
       {/* Logo Section */}
-      <div className="flex items-center justify-between space-x-5 bg-red-400 w-[60%] md:w-[40%] rounded-2xl p-3">
+      <div className="flex items-center justify-between space-x-5 bg-red-400 w-[60%] md:w-[30%] rounded-2xl p-3">
         <h1 className="text-white font-bold text-3xl">UniRide</h1>
         <img src={sustLogo} alt="Logo" className="w-10 h-10 rounded-3xl" />
       </div>
@@ -195,7 +195,7 @@ const NavBar = () => {
         </Link>
         
         {/* Show Student/Driver links only if not logged in */}
-        {!user && (
+        {/*!user && (
           <>
             <Link
               to="/student"
@@ -210,7 +210,7 @@ const NavBar = () => {
               Driver
             </Link>
           </>
-        )}
+        ) */}
         
         {/* Show appropriate portal link based on role */}
         {user && (
@@ -286,8 +286,8 @@ const NavBar = () => {
         {/* User Profile / Login - SINGLE SET OF BUTTONS */}
         {user ? (
           <div className="flex items-center space-x-3 ml-4">
-            <span className="text-white font-semibold">
-              {user.name} ({user.role})
+            <span className="text-white font-semibold px-4 py-2 font-bold text-white bg-green-500 rounded-2xl">
+              👤{user.name} 
             </span>
             <button
               onClick={handleLogout}
@@ -328,7 +328,7 @@ const NavBar = () => {
       {/* Mobile Dropdown Menu */}
       <div
         ref={hambarger}
-        className={`absolute right-4 top-16 bg-blue-400 rounded-3xl p-6 shadow-2xl flex flex-col space-y-4 font-bold text-lg transition-all duration-500 ease-in-out overflow-hidden z-50
+        className={`absolute right-4 top-16 bg-blue-400 rounded-3xl p-6 shadow-2xl flex flex-col space-y-4 font-bold text-lg transition-all duration-500 ease-in-out overflow-hidden z-550
         ${optionMenu ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}
       >
         <Link
@@ -340,7 +340,7 @@ const NavBar = () => {
         </Link>
         
         {/* Show Student/Driver links only if not logged in */}
-        {!user && (
+        {/* !user && (
           <>
             <Link
               to="/student"
@@ -357,7 +357,7 @@ const NavBar = () => {
               Driver
             </Link>
           </>
-        )}
+        ) */}
         
         {/* Show appropriate portal link based on role */}
         {user && (

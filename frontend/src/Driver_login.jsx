@@ -141,6 +141,11 @@ const DriverLg = () => {
             Sign up as Driver
           </a>
         </p>
+        <p>
+          test account: <br />
+          email: f@f<br /> 
+          password: ffffff
+        </p>
       </div>
     </div>
   );

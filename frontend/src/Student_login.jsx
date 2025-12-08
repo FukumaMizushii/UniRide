@@ -7,7 +7,8 @@ import { FaCarSide } from "react-icons/fa";
 const StudentLg = () => {
   const navigate = useNavigate();
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5500';
+  const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5500";
 
   const [formData, setFormData] = useState({
     email: "",
@@ -139,6 +140,11 @@ const StudentLg = () => {
           >
             Sign up as Student
           </a>
+        </p>
+        <p>
+          test account: <br />
+          email: a@a <br />
+          password: aaaaaa
         </p>
       </div>
     </div>

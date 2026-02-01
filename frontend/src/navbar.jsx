@@ -194,25 +194,6 @@ const NavBar = () => {
           Home
         </Link>
         
-        {/* Show Student/Driver links only if not logged in */}
-        {/*!user && (
-          <>
-            <Link
-              to="/student"
-              className="font-bold text-[#f2e8cf] text-xl transition-transform duration-300 hover:-translate-y-2 hover:shadow-lg hover:rounded-2xl hover:p-2 hover:bg-red-400"
-            >
-              Student
-            </Link>
-            <Link
-              to="/driver"
-              className="font-bold text-[#f2e8cf] text-xl transition-transform duration-300 hover:-translate-y-2 hover:shadow-lg hover:rounded-2xl hover:p-2 hover:bg-red-400"
-            >
-              Driver
-            </Link>
-          </>
-        ) */}
-        
-        {/* Show appropriate portal link based on role */}
         {user && (
           <Link
             to={user.role === 'student' ? '/points' : '/driverPortal'}
@@ -339,27 +320,7 @@ const NavBar = () => {
           Home
         </Link>
         
-        {/* Show Student/Driver links only if not logged in */}
-        {/* !user && (
-          <>
-            <Link
-              to="/student"
-              onClick={() => setOptionMenu(false)}
-              className="text-[#f2e8cf] transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg hover:rounded-2xl hover:p-2 hover:bg-red-400"
-            >
-              Student
-            </Link>
-            <Link
-              to="/driver"
-              onClick={() => setOptionMenu(false)}
-              className="text-[#f2e8cf] transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg hover:rounded-2xl hover:p-2 hover:bg-red-400"
-            >
-              Driver
-            </Link>
-          </>
-        ) */}
-        
-        {/* Show appropriate portal link based on role */}
+
         {user && (
           <Link
             to={user.role === 'student' ? '/points' : '/driverPortal'}

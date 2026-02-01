@@ -1,17 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import socket from "./socket";
-import Button from "./button";
-import gate from "./assets/sust-gate.jpg";
 import audi from "./assets/audi.jpg";
-import iict from "./assets/iict.jpg";
 import chetona71 from "./assets/chetona71.jpg";
 import eBuilding from "./assets/e-building.jpg";
-import shahHall from "./assets/shah-paran-hall.jpg";
-import mujtobaHall from "./assets/mujtoba-hall.jpg";
+import iict from "./assets/iict.jpg";
 import ladiesHall from "./assets/ladies-hall.jpg";
+import mujtobaHall from "./assets/mujtoba-hall.jpg";
+import shahHall from "./assets/shah-paran-hall.jpg";
+import gate from "./assets/sust-gate.jpg";
+import socket from "./socket";
 
-// -- add near the top (below your imports) --
 function deg2rad(d) {
   return (d * Math.PI) / 180;
 }
@@ -20,7 +18,6 @@ function rad2deg(r) {
 }
 
 /** calculateBearing(lat1, lon1, lat2, lon2)
- * returns bearing in degrees 0..360 where 0 = North, 90 = East
  */
 function calculateBearing(lat1, lon1, lat2, lon2) {
   if (
@@ -47,9 +44,6 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
   return (θ + 360) % 360;
 }
 
-// create a divIcon that rotates its inner SVG/emoji by `bearing` degrees.
-// labelHtml: optional inner HTML (svg, emoji, etc)
-// size: [w,h] and anchor default to center
 function createRotatedDivIcon({
   bearing = 0,
   labelHtml = `
@@ -81,8 +75,7 @@ function createRotatedDivIcon({
 
 const DriverPortal = () => {
   const navigate = useNavigate();
-  const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:5500";
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5500";
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef({});
@@ -106,22 +99,23 @@ const DriverPortal = () => {
     { title: "IICT", point: "IICT", category: "academic" },
     { title: "Chetona 71", point: "Chetona 71", category: "landmark" },
     { title: "E-Building", point: "E Building", category: "academic" },
-    {
-      title: "Central Auditorium",
-      point: "Central Auditorium",
-      category: "auditorium",
-    },
+    { title: "Central Auditorium", point: "Central Auditorium", category: "auditorium" },
     { title: "Shah Paran Hall", point: "Shah Paran Hall", category: "hall" },
     { title: "Mujtoba Ali Hall", point: "Mujtoba Ali Hall", category: "hall" },
     { title: "Ladies Hall", point: "Ladies Hall", category: "hall" },
   ];
 
   // Reusable function for driver popup content
-  const getDriverPopupContent = (driverName, autoId, seats, isCurrentDriver = false) => `
+  const getDriverPopupContent = (
+    driverName,
+    autoId,
+    seats,
+    isCurrentDriver = false,
+  ) => `
     <div style="text-align: center;">
-      <strong>🚗 ${isCurrentDriver ? 'You (Driver)' : 'Other Driver'}</strong><br>
+      <strong>🚗 ${isCurrentDriver ? "You (Driver)" : "Other Driver"}</strong><br>
       Name: ${driverName}<br>
-      ${autoId ? `Auto ID: ${autoId}<br>` : ''}
+      ${autoId ? `Auto ID: ${autoId}<br>` : ""}
       Seats: ${seats}/6 available
     </div>
   `;
@@ -131,7 +125,7 @@ const DriverPortal = () => {
     try {
       console.log("🔄 Fetching driver status from database...");
       const response = await fetch(
-        `${API_BASE_URL}/api/driver/status/${driverId}`
+        `${API_BASE_URL}/api/driver/status/${driverId}`,
       );
       const data = await response.json();
 
@@ -235,19 +229,18 @@ const DriverPortal = () => {
   useEffect(() => {
     availableSeatsRef.current = availableSeats;
   }, [availableSeats]);
-  
 
   // Initialize user and location tracking - SINGLE SOURCE OF TRUTH for current driver marker
-useEffect(() => {
-  if (!user) return;
+  useEffect(() => {
+    if (!user) return;
 
-  // Helper function to update driver marker
-  const updateDriverMarker = (latitude, longitude, bearing) => {
-    if (!window.L || !mapInstance.current) return;
-    const L = window.L;
-    
-    // Current driver icon HTML
-    const currentDriverHtml = `
+    // Helper function to update driver marker
+    const updateDriverMarker = (latitude, longitude, bearing) => {
+      if (!window.L || !mapInstance.current) return;
+      const L = window.L;
+
+      // Current driver icon HTML
+      const currentDriverHtml = `
       <div style="display:flex;align-items:center;justify-content:center;font-size:30px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3)); background: rgba(59, 130, 246, 0.9); border-radius: 50%; width:45px; height:45px; border:3px solid white;">
         <svg xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 640 640"
@@ -257,177 +250,110 @@ useEffect(() => {
       </div>
     `;
 
-    const icon = createRotatedDivIcon({
-      bearing: bearing,
-      labelHtml: currentDriverHtml,
-      size: [45, 45],
-      className: "current-driver-marker",
-    });
+      const icon = createRotatedDivIcon({
+        bearing: bearing,
+        labelHtml: currentDriverHtml,
+        size: [45, 45],
+        className: "current-driver-marker",
+      });
 
-    // Update or create marker
-    if (markersRef.current.currentDriver) {
-      try {
-        markersRef.current.currentDriver.setIcon(icon);
-        markersRef.current.currentDriver.setLatLng([latitude, longitude]);
-      } catch (e) {
-        // If anything odd, recreate marker
-        mapInstance.current.removeLayer(markersRef.current.currentDriver);
-        markersRef.current.currentDriver = L.marker([latitude, longitude], { icon })
+      // Update or create marker
+      if (markersRef.current.currentDriver) {
+        try {
+          markersRef.current.currentDriver.setIcon(icon);
+          markersRef.current.currentDriver.setLatLng([latitude, longitude]);
+        } catch (e) {
+          // If anything odd, recreate marker
+          mapInstance.current.removeLayer(markersRef.current.currentDriver);
+          markersRef.current.currentDriver = L.marker([latitude, longitude], {
+            icon,
+          })
+            .addTo(mapInstance.current)
+            .bindPopup(
+              getDriverPopupContent(
+                user.name,
+                user.autoId,
+                availableSeatsRef.current,
+                true,
+              ),
+            )
+            .openPopup();
+        }
+      } else {
+        // Initial creation
+        markersRef.current.currentDriver = L.marker([latitude, longitude], {
+          icon,
+        })
           .addTo(mapInstance.current)
-          .bindPopup(getDriverPopupContent(user.name, user.autoId, availableSeatsRef.current, true))
+          .bindPopup(
+            getDriverPopupContent(
+              user.name,
+              user.autoId,
+              availableSeatsRef.current,
+              true,
+            ),
+          )
           .openPopup();
       }
-    } else {
-      // Initial creation
-      markersRef.current.currentDriver = L.marker([latitude, longitude], { icon })
-        .addTo(mapInstance.current)
-        .bindPopup(getDriverPopupContent(user.name, user.autoId, availableSeatsRef.current, true))
-        .openPopup();
-    }
 
-    // Auto-zoom disabled - use "Zoom to Me" button instead
-    // mapInstance.current.setView([latitude, longitude], 16);
-  };
+      // mapInstance.current.setView([latitude, longitude], 16);
+    };
 
-  // ============================================
-  // OPTION 1: LIVE LOCATION TRACKING (REAL GPS)
-  // ============================================
-  // UNCOMMENT THIS SECTION for real GPS tracking
-  // COMMENT OUT the TEST LOCATION SECTION below
-  // /*
-  // Start location tracking
-  if (navigator.geolocation) {
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const newLoc = { latitude, longitude };
+    // Start location tracking
+    if (navigator.geolocation) {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const newLoc = { latitude, longitude };
 
-        // compute bearing using previous position if exists
-        const prev = prevDriverLocationRef.current;
-        let bearing = lastBearingRef.current; // Start with last known bearing instead of 0
-        
-        const now = Date.now();
-        if (prev && now - lastBearingUpdateRef.current >= BEARING_UPDATE_INTERVAL) {
-          bearing = calculateBearing(
-            prev.latitude,
-            prev.longitude,
+          // compute bearing using previous position if exists
+          const prev = prevDriverLocationRef.current;
+          let bearing = lastBearingRef.current; // Start with last known bearing instead of 0
+
+          const now = Date.now();
+          if (
+            prev &&
+            now - lastBearingUpdateRef.current >= BEARING_UPDATE_INTERVAL
+          ) {
+            bearing = calculateBearing(
+              prev.latitude,
+              prev.longitude,
+              latitude,
+              longitude,
+            );
+            lastBearingUpdateRef.current = now;
+            lastBearingRef.current = bearing; // Store the new bearing
+          }
+
+          // update prev for next watch tick
+          prevDriverLocationRef.current = newLoc;
+
+          // update state
+          setDriverLocation(newLoc);
+
+          // emit to server
+          socket.emit("send-location", {
+            permanentID: user.id,
             latitude,
-            longitude
-          );
-          lastBearingUpdateRef.current = now;
-          lastBearingRef.current = bearing; // Store the new bearing
-        }
+            longitude,
+            name: user.name,
+          });
 
-        // update prev for next watch tick
-        prevDriverLocationRef.current = newLoc;
+          // Update marker icon rotation
+          updateDriverMarker(latitude, longitude, bearing);
+        },
 
-        // update state
-        setDriverLocation(newLoc);
-
-        // emit to server
-        socket.emit("send-location", {
-          permanentID: user.id,
-          latitude,
-          longitude,
-          name: user.name,
-        });
-
-        // Update marker icon rotation
-        updateDriverMarker(latitude, longitude, bearing);
-      },
-
-      (err) => console.error("❌ Location error:", err),
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0,
-      }
-    );
-
-    return () => navigator.geolocation.clearWatch(watchId);
-  }
-  // */
-
-  // ============================================
-  // OPTION 2: TEST LOCATION SEQUENCE
-  // ============================================
-  // UNCOMMENT THIS SECTION for test locations
-  // COMMENT OUT the LIVE LOCATION SECTION above
-  /*
-  const testLocations = [
-    { latitude: 24.905822, longitude: 91.839995 },
-    { latitude: 24.907146, longitude: 91.837721 },
-    { latitude: 24.908742, longitude: 91.840339 },
-    { latitude: 24.909287, longitude: 91.837678 },
-    { latitude: 24.909287, longitude: 91.836133 },
-    { latitude: 24.910221, longitude: 91.833429 },
-    { latitude: 24.911778, longitude: 91.834631 },
-    { latitude: 24.913062, longitude: 91.836734 },
-    { latitude: 24.914736, longitude: 91.837635 },
-    { latitude: 24.917304, longitude: 91.838408 },
-    { latitude: 24.916448, longitude: 91.839910 },
-    { latitude: 24.915242, longitude: 91.840296 },
-    { latitude: 24.913724, longitude: 91.841326 },
-    { latitude: 24.912906, longitude: 91.841841 },
-    { latitude: 24.911544, longitude: 91.842613 },
-    { latitude: 24.910805, longitude: 91.842742 },
-  ];
-
-  let currentTestIndex = 0;
-  const TEST_INTERVAL = 1000; // 1 second between locations
-
-  const updateTestLocation = () => {
-    const location = testLocations[currentTestIndex];
-    const newLoc = { latitude: location.latitude, longitude: location.longitude };
-
-    // compute bearing using previous position if exists
-    const prev = prevDriverLocationRef.current;
-    let bearing = lastBearingRef.current; // Start with last known bearing instead of 0
-    
-    const now = Date.now();
-    if (prev && now - lastBearingUpdateRef.current >= BEARING_UPDATE_INTERVAL) {
-      bearing = calculateBearing(
-        prev.latitude,
-        prev.longitude,
-        location.latitude,
-        location.longitude
+        (err) => console.error("❌ Location error:", err),
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0,
+        },
       );
-      lastBearingUpdateRef.current = now;
-      lastBearingRef.current = bearing; // Store the new bearing
+
+      return () => navigator.geolocation.clearWatch(watchId);
     }
-
-    // update prev for next tick
-    prevDriverLocationRef.current = newLoc;
-
-    // update state
-    setDriverLocation(newLoc);
-
-    // emit to server
-    socket.emit("send-location", {
-      permanentID: user.id,
-      latitude: location.latitude,
-      longitude: location.longitude,
-      name: user.name,
-    });
-
-    // Update marker icon rotation
-    updateDriverMarker(location.latitude, location.longitude, bearing);
-
-    // Move to next location (loop back to start)
-    currentTestIndex = (currentTestIndex + 1) % testLocations.length;
-  };
-
-  // Start test sequence
-  const testInterval = setInterval(updateTestLocation, TEST_INTERVAL);
-
-  // Initial update
-  updateTestLocation();
-
-  return () => {
-    clearInterval(testInterval);
-  };
-  */
-}, [user]); // Removed availableSeats - it should not restart location tracking
+  }, [user]); 
 
   // Initialize Map
   useEffect(() => {
@@ -444,8 +370,8 @@ useEffect(() => {
         // Check if map container still exists
         if (!mapRef.current) return;
 
-        const topLeft = [24.948398100077377, 91.79677963256837];
-        const bottomRight = [24.896402266558727, 91.86355590820314];
+        const topLeft = [24.927939813793863, 91.84375260738254];
+        const bottomRight = [24.911234374116177, 91.81938016444603];
         const center = [24.921079669610492, 91.83162689208986];
 
         const bounds = L.latLngBounds([topLeft, bottomRight]);
@@ -463,7 +389,7 @@ useEffect(() => {
             attribution: "© OpenStreetMap contributors",
             maxZoom: 19,
             subdomains: ["a", "b", "c"],
-          }
+          },
         ).addTo(mapInstance.current);
 
         // Use setTimeout to avoid animation conflicts
@@ -546,7 +472,7 @@ useEffect(() => {
               <span style="color: red">${pt.name}</span><br>
               <span style="color: black">Requests: 0</span>
             </div>`,
-              { permanent: true, direction: "top", offset: [0, -60] }
+              { permanent: true, direction: "top", offset: [0, -60] },
             )
             .openTooltip();
         });
@@ -590,7 +516,7 @@ useEffect(() => {
         if (marker && marker.remove) marker.remove();
         pointMarkersRef.current[key] = null;
       });
-      
+
       Object.keys(markersRef.current).forEach((key) => {
         const obj = markersRef.current[key];
         // Handle both shapes: { marker, lastPos } or plain marker
@@ -616,14 +542,14 @@ useEffect(() => {
       const existing = markersRef.current[driverId];
       const lastPos = existing?.lastPos; // { latitude, longitude } or undefined
       let bearing = 0;
-      
+
       // Only calculate bearing if we have previous position and enough time has passed
       if (lastPos) {
         bearing = calculateBearing(
           lastPos.latitude,
           lastPos.longitude,
           latitude,
-          longitude
+          longitude,
         );
       }
 
@@ -650,7 +576,7 @@ useEffect(() => {
           existing.marker.setLatLng([latitude, longitude]);
           existing.marker.setIcon(icon);
           existing.marker.setPopupContent(
-            getDriverPopupContent(name, null, availableSeats, false)
+            getDriverPopupContent(name, null, availableSeats, false),
           );
           // store new lastPos
           existing.lastPos = { latitude, longitude };
@@ -659,11 +585,11 @@ useEffect(() => {
           try {
             mapInstance.current.removeLayer(existing.marker);
           } catch (err) {}
-          const m = L.marker([latitude, longitude], { icon }).addTo(
-            mapInstance.current
-          ).bindPopup(
-            getDriverPopupContent(name, null, availableSeats, false)
-          );
+          const m = L.marker([latitude, longitude], { icon })
+            .addTo(mapInstance.current)
+            .bindPopup(
+              getDriverPopupContent(name, null, availableSeats, false),
+            );
           markersRef.current[driverId] = {
             marker: m,
             lastPos: { latitude, longitude },
@@ -671,11 +597,9 @@ useEffect(() => {
         }
       } else {
         // new marker
-        const m = L.marker([latitude, longitude], { icon }).addTo(
-          mapInstance.current
-        ).bindPopup(
-          getDriverPopupContent(name, null, availableSeats, false)
-        );
+        const m = L.marker([latitude, longitude], { icon })
+          .addTo(mapInstance.current)
+          .bindPopup(getDriverPopupContent(name, null, availableSeats, false));
         markersRef.current[driverId] = {
           marker: m,
           lastPos: { latitude, longitude },
@@ -708,7 +632,7 @@ useEffect(() => {
       if (driverId === user?.id) {
         setAvailableSeats(driverSeats);
         alert(
-          `✅ Accepted ${acceptedCount} rides! ${driverSeats} seats remaining.`
+          `✅ Accepted ${acceptedCount} rides! ${driverSeats} seats remaining.`,
         );
 
         // Sync with database to ensure consistency
@@ -766,7 +690,7 @@ useEffect(() => {
     const handleRideRequestCancelled = (data) => {
       const { point, requestsCount } = data;
       console.log(
-        `🔄 Ride request cancelled at ${point}, new count: ${requestsCount}`
+        `🔄 Ride request cancelled at ${point}, new count: ${requestsCount}`,
       );
 
       setRideRequests((prev) => ({
@@ -784,6 +708,13 @@ useEffect(() => {
       }
     };
 
+    const handleConnect = () => {
+      console.log("✅ Socket reconnected, syncing all drivers");
+      socket.emit("get-driver-locations");
+    };
+    
+    socket.on("connect", handleConnect);
+
     socket.on("driver-location", handleDriverLocation);
     socket.on("new-ride-request", handleRideRequest);
     socket.on("ride-requests-updated", handleRideRequestsUpdated);
@@ -795,6 +726,10 @@ useEffect(() => {
     socket.emit("get-driver-locations");
 
     return () => {
+
+      socket.off("connect", handleConnect);
+
+
       socket.off("driver-location", handleDriverLocation);
       socket.off("new-ride-request", handleRideRequest);
       socket.off("ride-requests-updated", handleRideRequestsUpdated);
@@ -808,7 +743,7 @@ useEffect(() => {
   // Accept ride function
   const acceptRide = (pointName) => {
     if (!user) return;
-    
+
     if (availableSeats === 0) {
       alert("❌ No available seats! Please complete existing rides first.");
       return;
@@ -843,6 +778,39 @@ useEffect(() => {
     };
   }, [user]);
 
+// Add this NEW effect for driver location syncing
+useEffect(() => {
+  if (!user || user.role !== "driver") return; // Only for drivers
+  
+  console.log("🚗 Driver mode active - setting up location sync");
+  
+  // 1. Request locations on mount
+  socket.emit("get-driver-locations");
+  
+  // 2. Periodic sync every 10 seconds
+  const interval = setInterval(() => {
+    if (socket.connected) {
+      console.log("🔄 Periodic driver location sync...");
+      socket.emit("get-driver-locations");
+    }
+  }, 10000);
+  
+  // 3. Listen for any user connection changes
+  const handleUserChange = () => {
+    console.log("👤 User change detected, syncing driver locations...");
+    setTimeout(() => socket.emit("get-driver-locations"), 1000);
+  };
+  
+  socket.on("user-connected", handleUserChange);
+  socket.on("user-disconnected", handleUserChange);
+  
+  return () => {
+    clearInterval(interval);
+    socket.off("user-connected", handleUserChange);
+    socket.off("user-disconnected", handleUserChange);
+  };
+}, [user?.role]); // Run when user role changes
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -875,7 +843,7 @@ useEffect(() => {
                     mapInstance.current.setView(
                       [driverLocation.latitude, driverLocation.longitude],
                       16,
-                      { animate: true, duration: 0.5 }
+                      { animate: true, duration: 0.5 },
                     );
                   }
                 }}

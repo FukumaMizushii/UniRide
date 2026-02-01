@@ -44,9 +44,7 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
   return (θ + 360) % 360;
 }
 
-// create a divIcon that rotates its inner SVG/emoji by `bearing` degrees.
-// labelHtml: optional inner HTML (svg, emoji, etc)
-// size: [w,h] and anchor default to center
+
 function createRotatedDivIcon({
   bearing = 0,
   labelHtml = `
@@ -301,9 +299,13 @@ const MapSec = () => {
         // Check if map container still exists
         if (!mapRef.current) return;
 
-        const topLeft = [24.948398100077377, 91.79677963256837];
-        const bottomRight = [24.896402266558727, 91.86355590820314];
+        // const topLeft = [24.948398100077377, 91.79677963256837];
+        // const bottomRight = [24.896402266558727, 91.86355590820314];
+        // const center = [24.921079669610492, 91.83162689208986];
+        const topLeft = [24.927939813793863, 91.84375260738254];
+        const bottomRight = [24.911234374116177, 91.81938016444603];
         const center = [24.921079669610492, 91.83162689208986];
+
 
         const bounds = L.latLngBounds([topLeft, bottomRight]);
 

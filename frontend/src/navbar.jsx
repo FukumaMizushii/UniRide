@@ -332,8 +332,8 @@ const NavBar = () => {
         )}
         
         {/* Mobile Help Section */}
-        <div className="border-t border-blue-300 pt-2">
-          <div className="text-[#f2e8cf] font-bold mb-2">Help & Tools:</div>
+        <div className="border-t border-blue-300 pt-2 z-100">
+          <div className="text-[#f2e8cf] font-bold mb-2 z-100">Help & Tools:</div>
           
           {user && (
             <>

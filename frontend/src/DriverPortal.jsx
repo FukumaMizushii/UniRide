@@ -873,7 +873,7 @@ useEffect(() => {
         </div>
 
         {/* Dropdown Section */}
-        <div className=" flex flex-col gap-4 z-50 order-1 md:order-2 p-4">
+        <div className=" flex flex-col gap-4 z-10 order-1 md:order-2 p-4">
           <div className="relative bg-white rounded-2xl p-6 shadow-2xl ">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}

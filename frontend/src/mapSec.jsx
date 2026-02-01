@@ -827,7 +827,7 @@ const MapSec = () => {
         </div>
 
         {/* Dropdown Section */}
-        <div className="flex flex-col gap-4 order-1 md:order-2 p-2 relative z-50">
+        <div className="flex flex-col gap-4 order-1 md:order-2 p-2 relative z-10">
           {/* Ride Booking Dropdown */}
           <div className="relative bg-white rounded-2xl p-6 shadow-2xl">
             <button
